@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SPA: PUZZLE PIECE DETECTOR</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
@@ -13,16 +13,16 @@
             --sonic-red: #d60000;
             --emerald-green: #00ff41;
             --panel-bg: #001233;
-            --checked-dim: rgba(0, 0, 0, 0.6);
         }
 
         body {
             margin: 0; background: #000; color: #fff;
             font-family: 'Press Start 2P', cursive; font-size: 10px;
             display: flex; flex-direction: column; align-items: center;
-            background-image: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-image: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                              linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
             background-size: 100% 4px, 3px 100%;
-            overflow-x: hidden;
+            overflow-x: hidden; touch-action: none;
         }
 
         header {
@@ -33,25 +33,14 @@
 
         .main-layout {
             display: flex; width: 98%; max-width: 1400px;
-            gap: 15px; margin-top: 20px; flex-wrap: wrap;
+            gap: 15px; margin-top: 20px; flex-wrap: wrap; height: calc(100vh - 120px);
         }
 
-        /* Sidebar & Checklist */
         .sidebar {
             flex: 1; min-width: 280px; background: var(--panel-bg);
             border: 4px solid #fff; padding: 15px; display: flex; flex-direction: column; gap: 15px;
+            overflow-y: auto;
         }
-
-        .level-list { max-height: 300px; overflow-y: auto; border-bottom: 2px solid #fff; padding-bottom: 10px; }
-        
-        .checklist-area { flex-grow: 1; }
-        .check-item {
-            display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
-            padding: 5px; border: 1px solid #333; cursor: pointer;
-        }
-        .check-item.collected { color: var(--emerald-green); text-decoration: line-through; border-color: var(--emerald-green); }
-        .check-box { width: 15px; height: 15px; border: 2px solid #fff; display: inline-block; position: relative; }
-        .collected .check-box::after { content: 'X'; position: absolute; left: 1px; top: 1px; font-size: 10px; }
 
         .level-btn {
             width: 100%; text-align: left; padding: 10px; margin-bottom: 5px;
@@ -60,29 +49,36 @@
         }
         .level-btn.active { background: var(--sonic-blue); border-color: var(--sonic-yellow); }
 
-        .container { flex: 3; min-width: 350px; background: var(--panel-bg); border: 4px solid #fff; padding: 20px; }
+        .check-item {
+            display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+            padding: 8px; border: 1px solid #333; cursor: pointer; font-size: 7px;
+        }
+        .check-item.collected { color: #555; border-color: #222; text-decoration: line-through; }
 
-        .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; }
+        .container { flex: 3; min-width: 350px; background: var(--panel-bg); border: 4px solid #fff; display: flex; flex-direction: column; }
+
+        .toolbar { display: flex; flex-wrap: wrap; gap: 5px; padding: 10px; border-bottom: 2px solid #fff; background: #000; }
 
         button {
-            padding: 10px; background: var(--emerald-green); border: 3px solid #fff;
-            font-family: 'Press Start 2P', cursive; cursor: pointer; font-size: 8px;
+            padding: 8px; background: var(--emerald-green); border: 2px solid #fff;
+            font-family: 'Press Start 2P', cursive; cursor: pointer; font-size: 7px;
         }
-        button.erase { background: var(--sonic-red); color: white; }
-        button.active-mode { background: #fff; color: #000; box-shadow: 0 0 10px #fff; }
+        button.active-mode { background: #fff; color: #000; box-shadow: 0 0 8px #fff; }
+        button.erase { background: var(--sonic-red); color: #fff; }
 
         .viewer {
-            width: 100%; height: 600px; overflow: hidden;
-            border: 4px solid #fff; background: #111; position: relative;
-            touch-action: none; /* Required for custom pinch zoom */
+            flex-grow: 1; overflow: auto; background: #111; position: relative;
+            cursor: grab; display: block;
         }
+        .viewer:active { cursor: grabbing; }
 
-        canvas { display: block; image-rendering: pixelated; transform-origin: 0 0; }
+        canvas { display: block; image-rendering: pixelated; transform-origin: 0 0; transition: transform 0.1s ease-out; }
 
-        #stats-bar { background: #000; border: 2px solid var(--sonic-red); padding: 10px; margin: 10px 0; display: flex; justify-content: space-between; font-size: 8px;}
+        #stats-bar { background: var(--sonic-red); padding: 8px; display: flex; justify-content: space-between; font-size: 8px; }
 
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-thumb { background: var(--sonic-yellow); }
+        /* Progress Bar */
+        .progress-container { width: 100%; height: 10px; background: #000; border: 1px solid #fff; margin-top: 5px; }
+        .progress-fill { height: 100%; background: var(--emerald-green); width: 0%; transition: width 0.3s; }
     </style>
 </head>
 <body>
@@ -91,35 +87,31 @@
 
 <div class="main-layout">
     <div class="sidebar">
-        <div class="level-list" id="levelMenu"></div>
-        <div class="checklist-area">
-            <div style="color: var(--sonic-yellow); margin-bottom: 10px;">CHECKLIST:</div>
-            <div id="pieceChecklist"></div>
-        </div>
+        <div style="color:var(--sonic-yellow); font-size:9px;">ZONE SELECT:</div>
+        <div id="levelMenu"></div>
+        <hr>
+        <div style="color:var(--sonic-yellow); font-size:9px;">PROGRESS:</div>
+        <div class="progress-container"><div id="progFill" class="progress-fill"></div></div>
+        <div id="pieceChecklist"></div>
     </div>
 
     <div class="container">
         <div class="toolbar">
-            <input type="file" id="targetFile" style="display:none">
-            <button onclick="document.getElementById('targetFile').click()">PIECE IMG</button>
-            
-            <input type="file" id="mapFile" style="display:none">
-            <button onclick="document.getElementById('mapFile').click()">UPLOAD MAP</button>
-            
-            <input type="file" id="bgmFile" style="display:none">
-            <button onclick="document.getElementById('bgmFile').click()">BGM</button>
-
-            <button id="scanBtn" style="background: var(--sonic-yellow); color: #000;">SCAN</button>
+            <button onclick="document.getElementById('targetFile').click()">SET PIECE</button>
+            <button onclick="document.getElementById('mapFile').click()">LOAD MAP</button>
+            <button onclick="document.getElementById('bgmFile').click()">SET BGM</button>
+            <button id="scanBtn" style="background:var(--sonic-yellow); color:#000">SCAN</button>
             <button id="modeCorrect" onclick="setMode('correct')">CORRECT</button>
             <button id="modeErase" class="erase" onclick="setMode('erase')">ERASE</button>
-            <button onclick="adjustZoom(1.2)">+</button>
+            <button onclick="adjustZoom(1.25)">+</button>
             <button onclick="adjustZoom(0.8)">-</button>
             <button onclick="downloadMap()" style="background:var(--sonic-blue); color:#fff">EXPORT</button>
+            <button onclick="clearCurrentMarkers()" class="erase">CLEAR</button>
         </div>
 
         <div id="stats-bar">
             <span>ZONE: <span id="curZone">NONE</span></span>
-            <span>COUNT: <span id="count">0</span></span>
+            <span>PIECES: <span id="count">0</span></span>
         </div>
 
         <div class="viewer" id="viewer">
@@ -128,6 +120,9 @@
     </div>
 </div>
 
+<input type="file" id="targetFile" hidden accept="image/*">
+<input type="file" id="mapFile" hidden accept="image/*">
+<input type="file" id="bgmFile" hidden accept="audio/*">
 <audio id="bgm" loop></audio>
 
 <script>
@@ -137,17 +132,25 @@
         "Sky Chase", "Aerobase", "Gigantic Angel Act 1", "Gigantic Angel Act 2", "Last Utopia"
     ];
 
-    let currentLevel = levels[0];
-    let currentMode = 'explore'; // explore, correct, erase
-    let zoom = 1.0;
-    let markers = []; 
-    let mapImg = new Image();
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-    const bgm = document.getElementById('bgm');
+    let db, currentLevel = levels[0], markers = [], zoom = 1.0, currentMode = 'explore';
+    const canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d'), bgm = document.getElementById('bgm');
 
-    // --- INIT ---
-    window.onload = () => {
+    // --- INDEXED DB ENGINE ---
+    const request = indexedDB.open("SPADetectorDB", 2);
+    request.onupgradeneeded = e => {
+        db = e.target.result;
+        if(!db.objectStoreNames.contains("assets")) db.createObjectStore("assets");
+        if(!db.objectStoreNames.contains("markers")) db.createObjectStore("markers");
+    };
+    request.onsuccess = e => { db = e.target.result; init(); };
+
+    async function saveAsset(key, val) { const tx = db.transaction("assets", "readwrite"); tx.objectStore("assets").put(val, key); }
+    async function getAsset(key) { return new Promise(r => { db.transaction("assets").objectStore("assets").get(key).onsuccess = e => r(e.target.result); }); }
+    async function saveMarkers() { const tx = db.transaction("markers", "readwrite"); tx.objectStore("markers").put(markers, currentLevel); }
+    async function getMarkers(lvl) { return new Promise(r => { db.transaction("markers").objectStore("markers").get(lvl).onsuccess = e => r(e.target.result || []); }); }
+
+    // --- INITIALIZATION ---
+    async function init() {
         const menu = document.getElementById('levelMenu');
         levels.forEach(lvl => {
             const btn = document.createElement('button');
@@ -156,70 +159,63 @@
             btn.onclick = () => switchLevel(lvl);
             menu.appendChild(btn);
         });
-        if(localStorage.getItem('puzzleBgm')) bgm.src = localStorage.getItem('puzzleBgm');
-        switchLevel(currentLevel);
-        setupTouch();
-    };
 
-    function switchLevel(lvl) {
+        const savedBgm = await getAsset('bgm');
+        if(savedBgm) bgm.src = URL.createObjectURL(savedBgm);
+        switchLevel(currentLevel);
+    }
+
+    async function switchLevel(lvl) {
         currentLevel = lvl;
         document.getElementById('curZone').innerText = lvl.toUpperCase();
         document.querySelectorAll('.level-btn').forEach(b => b.classList.toggle('active', b.innerText === lvl));
         
-        // Load saved map and markers
-        const savedMap = localStorage.getItem(`map_${lvl}`);
-        const savedMarkers = localStorage.getItem(`markers_${lvl}`);
-        
-        markers = savedMarkers ? JSON.parse(savedMarkers) : [];
-        if(savedMap) {
-            mapImg.src = savedMap;
-            mapImg.onload = () => { render(); updateChecklist(); };
+        markers = await getMarkers(lvl);
+        const mapData = await getAsset(`map_${lvl}`);
+        if(mapData) {
+            const img = await loadImage(URL.createObjectURL(mapData));
+            canvas.width = img.width; canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
         } else {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            updateChecklist();
+            ctx.clearRect(0,0,canvas.width, canvas.height);
         }
+        render();
     }
 
+    // --- SCANNER (100% MATCH) ---
+    document.getElementById('scanBtn').onclick = async () => {
+        const templateBlob = await getAsset('template');
+        if(!templateBlob || canvas.width === 0) return alert("Upload Template + Map first!");
+        
+        const tImg = await loadImage(URL.createObjectURL(templateBlob));
+        const tPix = getPixels(tImg);
+        const mData = ctx.getImageData(0,0, canvas.width, canvas.height).data;
+        const mW = canvas.width;
+
+        for(let y=0; y < canvas.height - 22; y++) {
+            for(let x=0; x < canvas.width - 15; x++) {
+                let match = true;
+                for(let p of tPix) {
+                    const idx = ((y + p.y) * mW + (x + p.x)) * 4;
+                    // Strict 100% Match (Tolerance = 0)
+                    if(mData[idx] !== p.r || mData[idx+1] !== p.g || mData[idx+2] !== p.b) { match = false; break; }
+                }
+                if(match && !isDuplicate(x, y)) markers.push({x, y, collected: false});
+            }
+        }
+        saveMarkers(); render();
+    };
+
+    function isDuplicate(x, y) { return markers.some(m => Math.abs(m.x - x) < 5 && Math.abs(m.y - y) < 5); }
+
+    // --- UI MODES & INTERACTION ---
     function setMode(mode) {
         currentMode = (currentMode === mode) ? 'explore' : mode;
         document.getElementById('modeCorrect').classList.toggle('active-mode', currentMode === 'correct');
         document.getElementById('modeErase').classList.toggle('active-mode', currentMode === 'erase');
     }
 
-    // --- SCANNER ---
-    document.getElementById('scanBtn').onclick = async () => {
-        const template = localStorage.getItem('puzzleTemplate');
-        if(!template || !mapImg.src) return alert("Need Template + Map!");
-        
-        const tImg = await loadImage(template);
-        const tPixels = getPixels(tImg);
-        
-        const mData = ctx.getImageData(0,0, canvas.width, canvas.height);
-        const mPixels = mData.data;
-        const mW = mData.width;
-        
-        // Auto-Scan (100% strict match)
-        for(let y=0; y < canvas.height - 22; y++) {
-            for(let x=0; x < canvas.width - 15; x++) {
-                let match = true;
-                for(let p of tPixels) {
-                    const idx = ((y + p.y) * mW + (x + p.x)) * 4;
-                    if(Math.abs(mPixels[idx] - p.r) > 10) { match = false; break; }
-                }
-                if(match && !isDuplicate(x, y)) {
-                    markers.push({x, y, collected: false});
-                }
-            }
-        }
-        save();
-        render();
-        updateChecklist();
-    };
-
-    function isDuplicate(x, y) { return markers.some(m => Math.abs(m.x - x) < 10 && Math.abs(m.y - y) < 10); }
-
-    // --- INTERACTION ---
-    canvas.onclick = (e) => {
+    canvas.addEventListener('click', (e) => {
         const rect = canvas.getBoundingClientRect();
         const x = (e.clientX - rect.left) / zoom;
         const y = (e.clientY - rect.top) / zoom;
@@ -228,89 +224,63 @@
             markers.push({x: Math.round(x-7), y: Math.round(y-11), collected: false});
         } else if(currentMode === 'erase') {
             markers = markers.filter(m => !(Math.abs(m.x + 7 - x) < 15 && Math.abs(m.y + 11 - y) < 15));
+        } else {
+            // Toggle collected in explore mode
+            const m = markers.find(m => (Math.abs(m.x + 7 - x) < 15 && Math.abs(m.y + 11 - y) < 15));
+            if(m) m.collected = !m.collected;
         }
-        save(); render(); updateChecklist();
-    };
+        saveMarkers(); render();
+    });
+
+    function render() {
+        // Redraw Map
+        getAsset(`map_${currentLevel}`).then(async blob => {
+            if(!blob) return;
+            const img = await loadImage(URL.createObjectURL(blob));
+            ctx.drawImage(img, 0, 0);
+            
+            markers.forEach(m => {
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = m.collected ? '#444' : '#00ff41';
+                ctx.strokeRect(m.x, m.y, 15, 22);
+                if(m.collected) { ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(m.x, m.y, 15, 22); }
+            });
+
+            updateChecklist();
+        });
+    }
 
     function updateChecklist() {
         const list = document.getElementById('pieceChecklist');
         list.innerHTML = '';
+        let collectedCount = 0;
         markers.forEach((m, i) => {
+            if(m.collected) collectedCount++;
             const item = document.createElement('div');
             item.className = `check-item ${m.collected ? 'collected' : ''}`;
-            item.innerHTML = `<span class="check-box"></span> PIECE #${i+1}`;
-            item.onclick = (e) => {
-                e.stopPropagation();
-                m.collected = !m.collected;
-                save(); render(); updateChecklist();
-            };
+            item.innerHTML = `[${m.collected ? 'X' : ' '}] PIECE #${i+1}`;
+            item.onclick = () => { m.collected = !m.collected; saveMarkers(); render(); };
             list.appendChild(item);
         });
         document.getElementById('count').innerText = markers.length;
+        document.getElementById('progFill').style.width = markers.length ? (collectedCount / markers.length * 100) + '%' : '0%';
     }
 
-    function render() {
-        if(!mapImg.width) return;
-        canvas.width = mapImg.width; canvas.height = mapImg.height;
-        ctx.drawImage(mapImg, 0, 0);
-        
-        markers.forEach(m => {
-            ctx.lineWidth = 3;
-            ctx.strokeStyle = m.collected ? '#555' : '#00ff41';
-            ctx.strokeRect(m.x, m.y, 15, 22);
-            if(m.collected) {
-                ctx.fillStyle = 'rgba(0,0,0,0.5)';
-                ctx.fillRect(m.x, m.y, 15, 22);
-            }
-        });
-    }
-
-    // --- TOUCH & PINCH ZOOM ---
-    let lastDist = 0;
-    function setupTouch() {
-        const viewer = document.getElementById('viewer');
-        viewer.addEventListener('touchmove', (e) => {
-            if (e.touches.length === 2) {
-                const dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
-                if (lastDist > 0) adjustZoom(dist / lastDist);
-                lastDist = dist;
-            }
-        }, {passive: false});
-        viewer.addEventListener('touchend', () => lastDist = 0);
-    }
-
-    function adjustZoom(factor) {
-        zoom = Math.min(Math.max(0.2, zoom * factor), 5.0);
-        canvas.style.transform = `scale(${zoom})`;
-    }
-
-    // --- FILE HANDLING ---
-    document.getElementById('mapFile').onchange = (e) => {
-        const reader = new FileReader();
-        reader.onload = (f) => {
-            localStorage.setItem(`map_${currentLevel}`, f.target.result);
-            mapImg.src = f.target.result;
-            mapImg.onload = () => { render(); updateChecklist(); };
-        };
-        reader.readAsDataURL(e.target.files[0]);
+    // --- HELPERS ---
+    function adjustZoom(factor) { zoom *= factor; canvas.style.transform = `scale(${zoom})`; }
+    
+    document.getElementById('mapFile').onchange = e => {
+        const file = e.target.files[0];
+        saveAsset(`map_${currentLevel}`, file).then(() => switchLevel(currentLevel));
+    };
+    document.getElementById('targetFile').onchange = e => saveAsset('template', e.target.files[0]);
+    document.getElementById('bgmFile').onchange = e => {
+        const file = e.target.files[0];
+        saveAsset('bgm', file).then(() => { bgm.src = URL.createObjectURL(file); bgm.play(); });
     };
 
-    document.getElementById('targetFile').onchange = (e) => {
-        const reader = new FileReader();
-        reader.onload = (f) => localStorage.setItem('puzzleTemplate', f.target.result);
-        reader.readAsDataURL(e.target.files[0]);
-    };
-
-    document.getElementById('bgmFile').onchange = (e) => {
-        const reader = new FileReader();
-        reader.onload = (f) => {
-            localStorage.setItem('puzzleBgm', f.target.result);
-            bgm.src = f.target.result;
-            bgm.play();
-        };
-        reader.readAsDataURL(e.target.files[0]);
-    };
-
+    function clearCurrentMarkers() { if(confirm("Clear all pieces in this zone?")) { markers = []; saveMarkers(); render(); } }
+    
     function downloadMap() {
         const link = document.createElement('a');
         link.download = `SPA_${currentLevel}_Complete.png`;
@@ -318,7 +288,6 @@
         link.click();
     }
 
-    function save() { localStorage.setItem(`markers_${currentLevel}`, JSON.stringify(markers)); }
     function getPixels(img) {
         const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
         const x = c.getContext('2d'); x.drawImage(img, 0, 0);
