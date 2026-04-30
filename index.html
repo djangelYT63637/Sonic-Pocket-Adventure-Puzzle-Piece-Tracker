@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SPA: PIECE TRACKER (ADMIN)</title>
+    <title>SPA: PIECE TRACKER ADMIN</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
@@ -13,7 +13,6 @@
             --sonic-red: #d60000;
             --emerald-green: #00ff41;
             --panel-bg: #000c22;
-            --progress-blue: #00d2ff;
         }
 
         body {
@@ -39,16 +38,14 @@
             max-height: 40vh; overflow-y: auto;
         }
 
-        .stats-row { display: flex; gap: 15px; flex-wrap: wrap; justify-content: space-between; }
-        .stat-block { flex: 1; min-width: 140px; }
-
-        .progress-bar { width: 100%; height: 10px; background: #000; border: 2px solid #fff; margin-top: 4px; }
+        /* Stats & Bars */
+        .progress-bar { width: 100%; height: 10px; background: #000; border: 2px solid #fff; margin: 4px 0 10px 0; }
         .fill-stage { height: 100%; background: var(--emerald-green); width: 0%; transition: width 0.4s; }
-        .fill-total { height: 100%; background: var(--progress-blue); width: 0%; transition: width 0.4s; }
+        .fill-total { height: 100%; background: #00d2ff; width: 0%; transition: width 0.4s; }
 
         .level-grid {
             display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-            gap: 4px; margin: 8px 0;
+            gap: 4px; margin-bottom: 10px;
         }
         .level-btn {
             padding: 8px; background: rgba(255,255,255,0.1); border: 1px solid var(--sonic-blue);
@@ -56,14 +53,13 @@
         }
         .level-btn.active { background: var(--sonic-blue); border-color: var(--sonic-yellow); }
 
-        .checklist-grid { display: flex; flex-wrap: wrap; gap: 4px; border-top: 1px solid #333; padding-top: 8px; }
+        .checklist-grid { display: flex; flex-wrap: wrap; gap: 5px; }
         .check-item {
-            font-size: 6px; padding: 6px; border: 1px solid #444; cursor: pointer; background: #000;
-            min-width: 35px; text-align: center;
+            font-size: 7px; padding: 6px; border: 1px solid #444; cursor: pointer; background: #000; min-width: 35px; text-align: center;
         }
-        .check-item.collected { color: #555; border-color: var(--emerald-green); }
+        .check-item.collected { color: #555; border-color: var(--emerald-green); opacity: 0.6; }
 
-        /* VIEWPORT */
+        /* Map Viewer */
         .container { flex: 1; display: flex; flex-direction: column; background: #111; position: relative; }
         .toolbar { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px; background: #000; border-bottom: 2px solid #fff; }
 
@@ -71,9 +67,9 @@
             padding: 6px 8px; background: var(--emerald-green); border: 2px solid #fff;
             font-family: 'Press Start 2P'; cursor: pointer; font-size: 7px;
         }
-        button.active-mode { background: #fff; color: #000; box-shadow: 0 0 10px #fff; }
         button.admin { background: var(--sonic-yellow); color: #000; }
         button.erase { background: var(--sonic-red); color: #fff; }
+        button.active-mode { background: #fff; color: #000; box-shadow: 0 0 10px #fff; }
 
         .viewport { flex: 1; position: relative; overflow: hidden; cursor: grab; touch-action: none; }
         canvas { position: absolute; image-rendering: pixelated; transform-origin: 0 0; }
@@ -85,44 +81,49 @@
 
 <div class="main-layout">
     <div class="dashboard">
-        <div class="stats-row">
-            <div class="stat-block">
-                <div style="font-size:7px;">ZONE: <span id="stagePerc">0%</span></div>
-                <div class="progress-bar"><div id="stageFill" class="fill-stage"></div></div>
-            </div>
-            <div class="stat-block">
-                <div style="font-size:7px;">GAME: <span id="totalStats">0/0</span></div>
-                <div class="progress-bar"><div id="totalFill" class="fill-total"></div></div>
-            </div>
+        <div style="display:flex; justify-content:space-between; font-size:7px;">
+            <span>ZONE PROGRESS: <span id="stagePerc">0%</span></span>
+            <span>TOTAL: <span id="totalStats">0/0</span></span>
         </div>
+        <div class="progress-bar"><div id="stageFill" class="fill-stage"></div></div>
+        <div class="progress-bar"><div id="totalFill" class="fill-total"></div></div>
+
         <div class="level-grid" id="levelMenu"></div>
         <div id="pieceChecklist" class="checklist-grid"></div>
     </div>
 
     <div class="container">
         <div class="toolbar">
-            <button onclick="triggerInput('targetFile')" class="admin">TEMPLATE</button>
-            <button onclick="triggerInput('mapFile')" class="admin">MAP</button>
+            <button onclick="triggerInput('mapFile')">MAP</button>
+            <button onclick="triggerInput('targetFile')">PIECE</button>
             <button id="scanBtn" class="admin">SCAN</button>
-            <button id="modeCorrect" onclick="setMode('correct')">CORRECT</button>
+            <button id="modeCorrect" class="admin" onclick="setMode('correct')">CORRECT</button>
             <button id="modeErase" class="erase" onclick="setMode('erase')">ERASE</button>
-            <button onclick="zoomToPiece(-1)">RESET</button>
-            <button onclick="exportData()" class="admin">EXPORT JSON</button>
+            <button onclick="exportData()" style="background:var(--sonic-blue); color:#fff">JSON EXPORT</button>
         </div>
-        <div class="viewport" id="viewport"><canvas id="canvas"></canvas></div>
+
+        <div class="viewport" id="viewport">
+            <canvas id="canvas"></canvas>
+        </div>
     </div>
 </div>
 
-<input type="file" id="targetFile" hidden accept="image/*">
 <input type="file" id="mapFile" hidden accept="image/*">
+<input type="file" id="targetFile" hidden accept="image/*">
 <audio id="bgm" loop></audio>
 
 <script>
-    const levels = ["Neo South Island Act 1", "Neo South Island Act 2", "Secret Plant Act 1", "Secret Plant Act 2", "Cosmic Casino Act 1", "Cosmic Casino Act 2", "Aquatic Relix Act 1", "Aquatic Relix Act 2", "Sky Chase", "Aerobase", "Gigantic Angel Act 1", "Gigantic Angel Act 2", "Last Utopia"];
-    let db, currentLevel = levels[0], markers = [], zoom = 1.0, offsetX = 0, offsetY = 0, currentMode = 'explore';
-    let isDragging = false, lastX, lastY, initialPinchDist = 0;
+    const levels = [
+        "Neo South Island Act 1", "Neo South Island Act 2", "Secret Plant Act 1", "Secret Plant Act 2",
+        "Cosmic Casino Act 1", "Cosmic Casino Act 2", "Aquatic Relix Act 1", "Aquatic Relix Act 2",
+        "Sky Chase", "Aerobase", "Gigantic Angel Act 1", "Gigantic Angel Act 2", "Last Utopia"
+    ];
+
+    let db, currentLevel = levels[0], markers = [], zoom = 1.0, offsetX = 0, offsetY = 0;
+    let isDragging = false, lastX, lastY, initialPinchDist = 0, currentMode = 'explore';
     const canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d'), viewport = document.getElementById('viewport');
 
+    // --- REUSING PREVIOUS DATABASE (SPA_Master_DB) ---
     const request = indexedDB.open("SPA_Master_DB", 3);
     request.onsuccess = e => { db = e.target.result; init(); };
 
@@ -135,12 +136,14 @@
         const menu = document.getElementById('levelMenu');
         levels.forEach(lvl => {
             const btn = document.createElement('button');
-            btn.className = 'level-btn'; btn.innerText = lvl;
+            btn.className = 'level-btn';
+            btn.innerText = lvl;
             btn.onclick = () => switchLevel(lvl);
             menu.appendChild(btn);
         });
         switchLevel(currentLevel);
         setupGestures();
+        updateGlobalStats();
     }
 
     async function switchLevel(lvl) {
@@ -152,15 +155,14 @@
             const img = await loadImage(URL.createObjectURL(mapData));
             canvas.width = img.width; canvas.height = img.height;
             render();
-        }
-        zoomToPiece(-1);
+        } else { ctx.clearRect(0,0,canvas.width, canvas.height); updateChecklist(); }
     }
 
-    // --- SCANNER ---
+    // --- ADMIN SCANNER (100% MATCH) ---
     document.getElementById('scanBtn').onclick = async () => {
-        const templateBlob = await getAsset('template');
-        if(!templateBlob || canvas.width === 0) return alert("Missing Template or Map!");
-        const tImg = await loadImage(URL.createObjectURL(templateBlob));
+        const tBlob = await getAsset('template');
+        if(!tBlob || canvas.width === 0) return alert("Upload Piece Template!");
+        const tImg = await loadImage(URL.createObjectURL(tBlob));
         const tPix = getPixels(tImg);
         const mData = ctx.getImageData(0,0, canvas.width, canvas.height).data;
         const mW = canvas.width;
@@ -172,11 +174,37 @@
                     const idx = ((y + p.y) * mW + (x + p.x)) * 4;
                     if(mData[idx] !== p.r || mData[idx+1] !== p.g || mData[idx+2] !== p.b) { match = false; break; }
                 }
-                if(match && !markers.some(m => Math.abs(m.x - x) < 5 && Math.abs(m.y - y) < 5)) 
-                    markers.push({x, y, collected: false});
+                if(match && !isDuplicate(x, y)) markers.push({x, y, collected: false});
             }
         }
         markers.sort((a,b) => a.x - b.x);
+        saveMarkers(); render();
+    };
+
+    function isDuplicate(x, y) { return markers.some(m => Math.abs(m.x - x) < 5 && Math.abs(m.y - y) < 5); }
+
+    // --- UI & MODES ---
+    function setMode(mode) {
+        currentMode = (currentMode === mode) ? 'explore' : mode;
+        document.getElementById('modeCorrect').classList.toggle('active-mode', currentMode === 'correct');
+        document.getElementById('modeErase').classList.toggle('active-mode', currentMode === 'erase');
+    }
+
+    canvas.onclick = e => {
+        if(isDragging) return;
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / zoom;
+        const y = (e.clientY - rect.top) / zoom;
+
+        if(currentMode === 'correct') {
+            markers.push({x: Math.round(x-7), y: Math.round(y-11), collected: false});
+            markers.sort((a,b) => a.x - b.x);
+        } else if(currentMode === 'erase') {
+            markers = markers.filter(m => !(Math.abs(m.x + 7 - x) < 15 && Math.abs(m.y + 11 - y) < 15));
+        } else {
+            const m = markers.find(m => (Math.abs(m.x + 7 - x) < 15 && Math.abs(m.y + 11 - y) < 15));
+            if(m) m.collected = !m.collected;
+        }
         saveMarkers(); render();
     };
 
@@ -186,9 +214,9 @@
             const img = await loadImage(URL.createObjectURL(blob));
             ctx.drawImage(img, 0, 0);
             markers.forEach(m => {
-                ctx.lineWidth = 3; ctx.strokeStyle = m.collected ? '#444' : '#00ff41';
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = m.collected ? '#444' : '#00ff41';
                 ctx.strokeRect(m.x, m.y, 15, 22);
-                if(m.collected) { ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(m.x, m.y, 15, 22); }
             });
             updateChecklist(); updateTransform();
         });
@@ -201,62 +229,51 @@
             const item = document.createElement('div');
             item.className = `check-item ${m.collected ? 'collected' : ''}`;
             item.innerText = `#${i+1}`;
-            item.onclick = () => zoomToPiece(i);
+            item.onclick = () => { // Teleport
+                zoom = 2.5;
+                offsetX = (viewport.offsetWidth/2) - (m.x * zoom);
+                offsetY = (viewport.offsetHeight/2) - (m.y * zoom);
+                updateTransform();
+            };
             item.ondblclick = () => { m.collected = !m.collected; saveMarkers(); render(); };
             list.appendChild(item);
         });
-        const stagePerc = markers.length ? Math.round((markers.filter(m=>m.collected).length/markers.length)*100) : 0;
-        document.getElementById('stagePerc').innerText = stagePerc + '%';
-        document.getElementById('stageFill').style.width = stagePerc + '%';
+        const coll = markers.filter(m => m.collected).length;
+        document.getElementById('stagePerc').innerText = markers.length ? Math.round(coll/markers.length*100)+'%' : '0%';
+        document.getElementById('stageFill').style.width = (coll/markers.length*100)+'%';
     }
 
     async function updateGlobalStats() {
-        let total = 0, coll = 0;
-        for(let lvl of levels) { const m = await getMarkers(lvl); total += m.length; coll += m.filter(p => p.collected).length; }
-        document.getElementById('totalStats').innerText = `${coll}/${total}`;
-        document.getElementById('totalFill').style.width = (total ? (coll/total)*100 : 0) + '%';
+        let tP = 0, tC = 0;
+        for(let l of levels) { const m = await getMarkers(l); tP += m.length; tC += m.filter(x => x.collected).length; }
+        document.getElementById('totalStats').innerText = `${tC}/${tP}`;
+        document.getElementById('totalFill').style.width = (tC/tP*100)+'%';
     }
 
-    function zoomToPiece(index) {
-        if(index === -1) { zoom = 0.4; offsetX = 10; offsetY = 10; } 
-        else {
-            const m = markers[index]; zoom = 2.5;
-            offsetX = (viewport.offsetWidth/2) - (m.x * zoom);
-            offsetY = (viewport.offsetHeight/2) - (m.y * zoom);
-        }
-        updateTransform();
+    // --- DATA EXPORT ---
+    async function exportData() {
+        const data = {};
+        for(let l of levels) { const m = await getMarkers(l); data[l] = m.map(p => ({x:p.x, y:p.y})); }
+        const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+        a.download = 'SPA_Master_Data.json'; a.click();
     }
 
-    function setMode(mode) {
-        currentMode = (currentMode === mode) ? 'explore' : mode;
-        document.getElementById('modeCorrect').classList.toggle('active-mode', currentMode === 'correct');
-        document.getElementById('modeErase').classList.toggle('active-mode', currentMode === 'erase');
-    }
-
-    canvas.onclick = e => {
-        if(isDragging) return;
-        const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left) / zoom, y = (e.clientY - rect.top) / zoom;
-        if(currentMode === 'correct') { markers.push({x: Math.round(x-7), y: Math.round(y-11), collected: false}); markers.sort((a,b)=>a.x-b.x); }
-        else if(currentMode === 'erase') { markers = markers.filter(m => !(Math.abs(m.x+7-x)<15 && Math.abs(m.y+11-y)<15)); }
-        else { const m = markers.find(m => Math.abs(m.x+7-x)<15 && Math.abs(m.y+11-y)<15); if(m) m.collected = !m.collected; }
-        saveMarkers(); render();
-    };
-
+    // --- GESTURES ---
     function setupGestures() {
         viewport.onmousedown = e => { isDragging = true; lastX = e.clientX; lastY = e.clientY; };
         window.onmouseup = () => isDragging = false;
-        window.onmousemove = e => { if(isDragging) { offsetX += (e.clientX - lastX); offsetY += (e.clientY - lastY); lastX = e.clientX; lastY = e.clientY; updateTransform(); } };
+        window.onmousemove = e => { if(isDragging) { offsetX += (e.clientX-lastX); offsetY += (e.clientY-lastY); lastX = e.clientX; lastY = e.clientY; updateTransform(); } };
         viewport.addEventListener('touchstart', e => {
-            if(e.touches.length === 1) { isDragging = true; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; }
-            else if(e.touches.length === 2) initialPinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+            if(e.touches.length===1) { isDragging = true; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; }
+            else if(e.touches.length===2) initialPinchDist = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
         });
         viewport.addEventListener('touchmove', e => {
             e.preventDefault();
-            if(e.touches.length === 1 && isDragging) { offsetX += (e.touches[0].clientX - lastX); offsetY += (e.touches[0].clientY - lastY); lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; }
-            else if(e.touches.length === 2) { const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); zoom *= (d / initialPinchDist); initialPinchDist = d; }
+            if(e.touches.length===1 && isDragging) { offsetX += (e.touches[0].clientX-lastX); offsetY += (e.touches[0].clientY-lastY); lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; }
+            else if(e.touches.length===2) { const d = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY); zoom *= (d/initialPinchDist); initialPinchDist = d; }
             updateTransform();
-        }, {passive: false});
+        }, {passive:false});
         viewport.onwheel = e => { e.preventDefault(); zoom *= (e.deltaY > 0 ? 0.9 : 1.1); updateTransform(); };
     }
 
@@ -264,15 +281,6 @@
     function triggerInput(id) { document.getElementById(id).click(); }
     document.getElementById('mapFile').onchange = e => saveAsset(`map_${currentLevel}`, e.target.files[0]).then(() => switchLevel(currentLevel));
     document.getElementById('targetFile').onchange = e => saveAsset('template', e.target.files[0]);
-    async function exportData() {
-        const data = {}; for(let l of levels) data[l] = (await getMarkers(l)).map(p=>({x:p.x, y:p.y}));
-        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], {type:'application/json'})); a.download = 'SPA_Master.json'; a.click();
-    }
-    function getPixels(img) {
-        const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const x = c.getContext('2d'); x.drawImage(img, 0, 0);
-        const d = x.getImageData(0,0,img.width,img.height).data, p = [];
-        for(let i=0; i<d.length; i+=4) if(d[i+3]>200) p.push({x:(i/4)%img.width, y:Math.floor((i/4)/img.width), r:d[i], g:d[i+1], b:d[i+2]}); return p;
-    }
     function loadImage(s) { return new Promise(r => {const i=new Image(); i.onload=()=>r(i); i.src=s;}); }
 </script>
 </body>
