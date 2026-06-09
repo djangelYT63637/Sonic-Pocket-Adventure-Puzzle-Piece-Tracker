@@ -26,7 +26,7 @@ const MAP_FILES = {
     "Last Utopia":            "last-utopia.png"
 };
 
-// --- Path Resolution Engine ---
+// --- Corrected Path Resolution Engine ---
 const getBasePath = () => {
     const loc = window.location;
     if (loc.hostname.includes("github.io")) {
@@ -79,14 +79,15 @@ async function loadStageData(stageName) {
     currentStage = stageName;
     document.querySelectorAll('.level-btn').forEach(b => b.classList.toggle('active', b.innerText === stageName));
 
-    // CRITICAL FIX: Safe Fetch with Active Fallback Integration
+    // CRITICAL FALLBACK SAFEGUARD: Wrapped entirely so a missing JSON doesn't stop the engine!
     try {
         const res = await fetch(`${BASE_PATH}assets/puzzlepieces_data.json`);
-        if (!res.ok) throw new Error(`HTTP 404 - File Not Present Yet`);
+        if (!res.ok) throw new Error(`Status ${res.status}`); // Catch 404 cleanly
         const data = await res.json();
         stageMarkers = data[stageName] || [];
     } catch (e) { 
-        // Fallback: If the JSON doesn't exist yet, seamlessly load an empty marker list and proceed!
+        // Silently swallow the error, print a reminder in console, and let the images load!
+        console.warn("JSON Database file not created/found yet. Starting with blank puzzle coordinates.");
         stageMarkers = []; 
     }
     stageMarkers.sort((a, b) => a.x - b.x);
@@ -99,7 +100,7 @@ async function loadStageData(stageName) {
         req.onerror = () => r({});
     });
 
-    // Execute Image Map pipeline execution
+    // Fire the map loader using the absolute resolved repository folder coordinates
     const fileName = MAP_FILES[stageName];
     activeMapImage.src = `${BASE_PATH}maps/${fileName}`;
     
@@ -119,10 +120,16 @@ async function loadStageData(stageName) {
         canvas.style.width = "100%"; canvas.style.height = "auto";
         ctx.fillStyle = "#000c22"; ctx.fillRect(0, 0, 600, 340);
         ctx.fillStyle = "#ff3333"; ctx.font = "10px 'Press Start 2P'";
-        ctx.fillText("MAP LOADING FAILURE!", 20, 50);
-        ctx.fillStyle = "#ffffff"; ctx.fillText("THE BROWSER TRIED TO LOOK HERE:", 20, 90);
-        ctx.fillStyle = "#ffe700"; ctx.fillText(activeMapImage.src, 20, 130); 
-        ctx.fillStyle = "#ffffff"; ctx.fillText("CHECK CAPS / SPELLING / REPO FOLDER", 20, 200);
+        
+        ctx.fillText("CRITICAL LOADING FAILURE!", 20, 50);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText("THE BROWSER TRIED TO LOOK HERE:", 20, 90);
+        
+        ctx.fillStyle = "#ffe700";
+        ctx.fillText(activeMapImage.src, 20, 130); 
+        
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText("CHECK CAPS / SPELLING / REPO DIRECTORY", 20, 200);
         buildChecklistUI();
     };
 }
@@ -305,5 +312,5 @@ function exportMasterJSON() {
     const out = {}; out[currentStage] = stageMarkers.map(m => ({ x: Math.round(m.x), y: Math.round(m.y) }));
     const blob = new Blob([JSON.stringify(out, null, 4)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'puzzlepieces_data.json'; a.click();
-                              }
-        
+       }
+                                       
