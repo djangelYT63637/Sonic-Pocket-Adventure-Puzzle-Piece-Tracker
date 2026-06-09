@@ -1,15 +1,13 @@
 /* ==========================================================================
-   SONIC POCKET ADVENTURE: PIECE TRACKER - DEFINITIVE ENGINE (v17.0)
+   SONIC POCKET ADVENTURE: PIECE TRACKER - DEFINITIVE ENGINE (v18.0)
    ========================================================================== */
 
-// --- Configuration Constants ---
 const STAGES = [
     "Neo South Island Act 1", "Neo South Island Act 2", "Secret Plant Act 1", "Secret Plant Act 2",
     "Cosmic Casino Act 1", "Cosmic Casino Act 2", "Aquatic Relix Act 1", "Aquatic Relix Act 2",
     "Sky Chase", "Aerobase", "Gigantic Angel Act 1", "Gigantic Angel Act 2", "Last Utopia"
 ];
 
-// Explicit Hardcoded File Matrix
 const MAP_FILES = {
     "Neo South Island Act 1": "neo-south-island-act-1.png",
     "Neo South Island Act 2": "neo-south-island-act-2.png",
@@ -26,7 +24,6 @@ const MAP_FILES = {
     "Last Utopia":            "last-utopia.png"
 };
 
-// --- Corrected Path Resolution Engine ---
 const getBasePath = () => {
     const loc = window.location;
     if (loc.hostname.includes("github.io")) {
@@ -38,21 +35,23 @@ const getBasePath = () => {
 };
 const BASE_PATH = getBasePath();
 
-// --- Engine State Management ---
+// Engine Core Context Variables
 let db = null, currentStage = STAGES[0], stageMarkers = [], collectedStates = {};
 let zoom = 0.5, offsetX = 20, offsetY = 20, isDragging = false, startX = 0, startY = 0, initialPinchDist = 0;
 let isAdminMode = new URLSearchParams(window.location.search).get('mode') === 'admin';
-
 let globalActiveMapImage = null;
 
-// DOM Element Cache
-const canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d'), viewport = document.getElementById('viewport');
-const levelMenu = document.getElementById('levelMenu'), checklistGrid = document.getElementById('pieceChecklist');
+// Global Handle Declarations
+let canvas, ctx, viewport, levelMenu, checklistGrid;
 
 document.addEventListener('DOMContentLoaded', () => {
-    if (!canvas || !ctx) {
-        alert("CRITICAL SYSTEM ERROR: Canvas missing.");
-    }
+    // Cache UI Target Elements safely upon completion of DOM load cycle
+    canvas = document.getElementById('canvas');
+    if (canvas) ctx = canvas.getContext('2d');
+    viewport = document.getElementById('viewport');
+    levelMenu = document.getElementById('levelMenu');
+    checklistGrid = document.getElementById('pieceChecklist');
+
     document.querySelectorAll('.admin-ui').forEach(el => el.style.display = isAdminMode ? 'flex' : 'none');
     
     const dbRequest = indexedDB.open("SPA_Community_Tracker_DB", 2);
@@ -64,8 +63,8 @@ document.addEventListener('DOMContentLoaded', () => {
     dbRequest.onerror = () => { buildInterface(); };
 });
 
-/* --- UI Construction & Asset Loading --- */
 function buildInterface() {
+    if (!levelMenu) return;
     levelMenu.innerHTML = '';
     STAGES.forEach(stg => {
         const btn = document.createElement('button');
@@ -102,23 +101,20 @@ async function loadStageData(stageName) {
     });
 
     const fileName = MAP_FILES[stageName];
-    
-    // CRITICAL FIX: Add a unique timestamp parameter onto the URL string to destroy browser memory cache traps
     const targetSrcURL = `${BASE_PATH}maps/${fileName}?t=${new Date().getTime()}`;
     
     const imgWorker = new Image();
-    
-    // SECURITY FIX: Force crossOrigin to anonymous BEFORE setting the source path.
-    // This explicitly tells the browser to bypass local canvas security restrictions.
     imgWorker.crossOrigin = "anonymous";
     
     imgWorker.onload = () => {
         globalActiveMapImage = imgWorker;
         
-        canvas.width = imgWorker.width;
-        canvas.height = imgWorker.height;
-        canvas.style.width = imgWorker.width + "px";
-        canvas.style.height = imgWorker.height + "px";
+        if (canvas) {
+            canvas.width = imgWorker.width;
+            canvas.height = imgWorker.height;
+            canvas.style.width = imgWorker.width + "px";
+            canvas.style.height = imgWorker.height + "px";
+        }
         
         zoom = window.innerHeight > window.innerWidth ? 0.35 : 0.6;
         offsetX = 30; offsetY = 30;
@@ -127,25 +123,24 @@ async function loadStageData(stageName) {
     };
     
     imgWorker.onerror = (err) => {
-        console.error("Image loading block trapped a critical error event trace:", err);
-        alert(`Failed to execute asset canvas mapping:\n${targetSrcURL}`);
-        
-        canvas.width = 600; canvas.height = 340;
-        canvas.style.width = "100%"; canvas.style.height = "auto";
-        ctx.fillStyle = "#000c22"; ctx.fillRect(0, 0, 600, 340);
-        ctx.fillStyle = "#ff3333"; ctx.font = "10px 'Press Start 2P'";
-        ctx.fillText("CRITICAL IMAGE INITIALIZATION ERROR", 20, 50);
-        ctx.fillStyle = "#ffffff";
-        ctx.fillText(targetSrcURL, 20, 100);
+        console.error("Image loader error caught: ", err);
+        if (ctx) {
+            canvas.width = 600; canvas.height = 340;
+            canvas.style.width = "100%"; canvas.style.height = "auto";
+            ctx.fillStyle = "#000c22"; ctx.fillRect(0, 0, 600, 340);
+            ctx.fillStyle = "#ff3333"; ctx.font = "10px 'Press Start 2P'";
+            ctx.fillText("CRITICAL CANVAS RENDER PIPELINE FAILURE", 20, 50);
+            ctx.fillStyle = "#ffffff";
+            ctx.fillText(targetSrcURL, 20, 100);
+        }
         buildChecklistUI();
     };
 
     imgWorker.src = targetSrcURL;
 }
 
-/* --- Graphics Render Engine --- */
 function renderMap() {
-    if (!globalActiveMapImage || !globalActiveMapImage.complete || globalActiveMapImage.width === 0) return;
+    if (!globalActiveMapImage || !globalActiveMapImage.complete || globalActiveMapImage.width === 0 || !ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(globalActiveMapImage, 0, 0);
 
@@ -167,6 +162,7 @@ function renderMap() {
 }
 
 function buildChecklistUI() {
+    if (!checklistGrid) return;
     checklistGrid.innerHTML = '';
     stageMarkers.forEach((m, idx) => {
         const item = document.createElement('div');
@@ -189,13 +185,17 @@ function buildChecklistUI() {
     
     const currentCollected = stageMarkers.filter((_, i) => collectedStates[i]).length;
     const stagePerc = stageMarkers.length ? Math.round((currentCollected / stageMarkers.length) * 100) : 0;
-    document.getElementById('stagePerc').innerText = `${stagePerc}%`;
-    document.getElementById('stageFill').style.width = `${stagePerc}%`;
+    
+    const stagePercEl = document.getElementById('stagePerc');
+    const stageFillEl = document.getElementById('stageFill');
+    if (stagePercEl) stagePercEl.innerText = `${stagePerc}%`;
+    if (stageFillEl) stageFillEl.style.width = `${stagePerc}%`;
     
     let total = 0, done = 0;
     STAGES.forEach(async s => {
         if(s === currentStage) { total += stageMarkers.length; done += currentCollected; }
-        document.getElementById('totalStats').innerText = `${done}/${total}`;
+        const totalStatsEl = document.getElementById('totalStats');
+        if (totalStatsEl) totalStatsEl.innerText = `${done}/${total}`;
     });
 }
 
@@ -206,12 +206,12 @@ function togglePiece(idx) {
     renderMap();
 }
 
-/* --- Input Event Listeners & Transforms --- */
 function applyTransform() { 
     if(canvas) canvas.style.transform = `translate3d(${offsetX}px,${offsetY}px,0) scale(${zoom})`; 
 }
 
 function setupGestureListeners() {
+    if (!viewport) return;
     viewport.onmousedown = (e) => { isDragging = true; startX = e.clientX - offsetX; startY = e.clientY - offsetY; };
     window.onmouseup = () => isDragging = false;
     window.onmousemove = (e) => { if (isDragging) { offsetX = e.clientX - startX; offsetY = e.clientY - startY; applyTransform(); } };
@@ -232,16 +232,19 @@ function setupGestureListeners() {
         }
     }, {passive:false});
 
-    canvas.onclick = (e) => {
-        if (isDragging) return;
-        const b = canvas.getBoundingClientRect();
-        const cx = (e.clientX - b.left) / zoom, cy = (e.clientY - b.top) / zoom;
-        const hit = stageMarkers.findIndex(m => cx >= m.x && cx <= (m.x + 15) && cy >= m.y && cy <= (m.y + 22));
-        if (hit !== -1) togglePiece(hit);
-    };
+    if (canvas) {
+        canvas.onclick = (e) => {
+            if (isDragging) return;
+            const b = canvas.getBoundingClientRect();
+            const cx = (e.clientX - b.left) / zoom, cy = (e.clientY - b.top) / zoom;
+            const hit = stageMarkers.findIndex(m => cx >= m.x && cx <= (m.x + 15) && cy >= m.y && cy <= (m.y + 22));
+            if (hit !== -1) togglePiece(hit);
+        };
+    }
 }
 
 function zoomCalc(m, fx, fy) {
+    if (!viewport) return;
     const nz = Math.min(Math.max(0.1, zoom * m), 10.0);
     const vb = viewport.getBoundingClientRect();
     const rx = fx - vb.left - offsetX, ry = fy - vb.top - offsetY;
@@ -265,9 +268,8 @@ function setupGamepadPolling() {
     });
 }
 
-/* --- Mobile / Desktop Admin Tools --- */
 function adminManualAdd() {
-    if (!isAdminMode) return;
+    if (!isAdminMode || !viewport) return;
     const viewCenterCanvasX = ((viewport.offsetWidth / 2) - offsetX) / zoom;
     const viewCenterCanvasY = ((viewport.offsetHeight / 2) - offsetY) / zoom;
     stageMarkers.push({ x: Math.round(viewCenterCanvasX - 7.5), y: Math.round(viewCenterCanvasY - 11) });
@@ -286,7 +288,7 @@ function adminManualDelete() {
 
 async function runMobileScanner() {
     const input = document.getElementById('adminTemplateFileInput');
-    if (!input.files.length) return alert("Please select your template PNG image first.");
+    if (!input || !input.files.length) return alert("Please select your template PNG image first.");
     
     const tImg = await new Promise(r => { const img = new Image(); img.onload = () => r(img); img.src = URL.createObjectURL(input.files[0]); });
     const bCanvas = document.createElement('canvas'); bCanvas.width = tImg.width; bCanvas.height = tImg.height;
@@ -301,7 +303,7 @@ async function runMobileScanner() {
         }
     }
 
-    if(!canvas) return;
+    if(!canvas || !ctx) return;
     const mBuffer = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
     for (let y = 0; y < canvas.height - 22; y++) {
         for (let x = 0; x < canvas.width - 15; x++) {
@@ -324,5 +326,5 @@ function exportMasterJSON() {
     const out = {}; out[currentStage] = stageMarkers.map(m => ({ x: Math.round(m.x), y: Math.round(m.y) }));
     const blob = new Blob([JSON.stringify(out, null, 4)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'puzzlepieces_data.json'; a.click();
-                         }
-                                 
+}
+   
