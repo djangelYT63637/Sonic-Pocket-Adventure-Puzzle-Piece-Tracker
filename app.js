@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SONIC POCKET ADVENTURE: PIECE TRACKER - DEFINITIVE ENGINE (v20.0)
+   SONIC POCKET ADVENTURE: PIECE TRACKER - ENTERPRISE CORE ENGINE (v21.0)
    ========================================================================== */
 
 const STAGES = [
@@ -27,22 +27,21 @@ const MAP_FILES = {
 const getBasePath = () => {
     const loc = window.location;
     if (loc.hostname.includes("github.io")) {
-        const pathSegments = loc.pathname.split('/').filter(segment => segment.length > 0);
-        const repoName = pathSegments[0]; 
-        return `${loc.origin}/${repoName}/`;
+        const pathSegments = loc.pathname.split('/').filter(s => s.length > 0);
+        return `${loc.origin}/${pathSegments[0]}/`;
     }
     return "./"; 
 };
 const BASE_PATH = getBasePath();
 
-// Engine Core Context Variables
+// Global State Properties Engine Space
 let db = null, currentStage = STAGES[0], stageMarkers = [], collectedStates = {};
-let zoom = 0.5, offsetX = 20, offsetY = 20, isDragging = false, startX = 0, startY = 0, initialPinchDist = 0;
+let zoom = 0.5, offsetX = 0, offsetY = 0, isDragging = false, startX = 0, startY = 0, initialPinchDist = 0;
 let isAdminMode = new URLSearchParams(window.location.search).get('mode') === 'admin';
 let globalActiveMapImage = null;
 
-// Global Handle Declarations
 let canvas, ctx, viewport, levelMenu, checklistGrid;
+let lastButtonState = {}; // Used to handle clean gamepad button clicks without rapid-firing
 
 document.addEventListener('DOMContentLoaded', () => {
     canvas = document.getElementById('canvas');
@@ -53,10 +52,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('.admin-ui').forEach(el => el.style.display = isAdminMode ? 'flex' : 'none');
     
-    const dbRequest = indexedDB.open("SPA_Community_Tracker_DB", 2);
+    // Persistent Storage System Initializer Matrix
+    const dbRequest = indexedDB.open("SPA_Community_Tracker_DB", 3);
     dbRequest.onupgradeneeded = (e) => {
         const d = e.target.result;
         if (!d.objectStoreNames.contains("user_progress")) d.createObjectStore("user_progress");
+        if (!d.objectStoreNames.contains("admin_coordinates")) d.createObjectStore("admin_coordinates");
     };
     dbRequest.onsuccess = (e) => { db = e.target.result; buildInterface(); };
     dbRequest.onerror = () => { buildInterface(); };
@@ -73,7 +74,7 @@ function buildInterface() {
         levelMenu.appendChild(btn);
     });
     setupGestureListeners();
-    setupGamepadPolling();
+    setupGamepadEngine();
     loadStageData(currentStage);
 }
 
@@ -81,17 +82,31 @@ async function loadStageData(stageName) {
     currentStage = stageName;
     document.querySelectorAll('.level-btn').forEach(b => b.classList.toggle('active', b.innerText === stageName));
 
-    try {
-        const res = await fetch(`${BASE_PATH}assets/puzzlepieces_data.json`);
-        if (!res.ok) throw new Error(`Status ${res.status}`);
-        const data = await res.json();
-        stageMarkers = data[stageName] || [];
-    } catch (e) { 
-        console.warn("JSON Database file not created/found yet. Starting with blank puzzle coordinates.");
-        stageMarkers = []; 
+    // 1. Coordinates Database Matrix Loading Core
+    let customCoords = null;
+    if (db) {
+        customCoords = await new Promise(r => {
+            const req = db.transaction("admin_coordinates", "readonly").objectStore("admin_coordinates").get(stageName);
+            req.onsuccess = () => r(req.result);
+            req.onerror = () => r(null);
+        });
+    }
+
+    if (customCoords) {
+        stageMarkers = customCoords;
+    } else {
+        try {
+            const res = await fetch(`${BASE_PATH}assets/puzzlepieces_data.json`);
+            if (!res.ok) throw new Error();
+            const data = await res.json();
+            stageMarkers = data[stageName] || [];
+        } catch (e) { 
+            stageMarkers = []; 
+        }
     }
     stageMarkers.sort((a, b) => a.x - b.x);
 
+    // 2. Collection Progress Metrics Load Block
     collectedStates = await new Promise(r => {
         if (!db) return r({});
         const req = db.transaction("user_progress", "readonly").objectStore("user_progress").get(stageName);
@@ -100,7 +115,6 @@ async function loadStageData(stageName) {
     });
 
     const fileName = MAP_FILES[stageName];
-    // FIX: Ensure clean subdirectory lookup parsing 
     const targetSrcURL = `${BASE_PATH}maps/${fileName}?t=${new Date().getTime()}`;
     
     const imgWorker = new Image();
@@ -112,8 +126,6 @@ async function loadStageData(stageName) {
         let targetWidth = imgWorker.width || imgWorker.naturalWidth || 2048;
         let targetHeight = imgWorker.height || imgWorker.naturalHeight || 512;
         
-        console.log(`Asset Engine Initialized: Size Dimension Metrics -> ${targetWidth}x${targetHeight}`);
-        
         if (canvas) {
             canvas.width = targetWidth;
             canvas.height = targetHeight;
@@ -121,24 +133,16 @@ async function loadStageData(stageName) {
             canvas.style.height = targetHeight + "px";
         }
         
-        zoom = window.innerHeight > window.innerWidth ? 0.35 : 0.6;
-        offsetX = 20; 
-        offsetY = 20;
-        
-        applyTransform();
-        renderMap();
+        centerMapInViewport();
     };
     
-    imgWorker.onerror = (err) => {
-        console.error("Image loader error caught: ", err);
+    imgWorker.onerror = () => {
         if (ctx && canvas) {
             canvas.width = 600; canvas.height = 340;
             canvas.style.width = "100%"; canvas.style.height = "auto";
             ctx.fillStyle = "#000c22"; ctx.fillRect(0, 0, 600, 340);
-            ctx.fillStyle = "#ff3333"; ctx.font = "10px 'Press Start 2P'";
-            ctx.fillText("CRITICAL CANVAS RENDER PIPELINE FAILURE", 20, 50);
-            ctx.fillStyle = "#ffffff";
-            ctx.fillText(targetSrcURL, 20, 100);
+            ctx.fillStyle = "#ff3333"; ctx.font = "8px 'Press Start 2P'";
+            ctx.fillText("RENDER PIPELINE CRITICAL DISCONNECTED ERR", 20, 50);
         }
         buildChecklistUI();
     };
@@ -146,15 +150,19 @@ async function loadStageData(stageName) {
     imgWorker.src = targetSrcURL;
 }
 
+function centerMapInViewport() {
+    if (!canvas || !viewport) return;
+    zoom = window.innerHeight > window.innerWidth ? 0.35 : 0.65;
+    offsetX = (viewport.offsetWidth / 2) - ((canvas.width * zoom) / 2);
+    offsetY = (viewport.offsetHeight / 2) - ((canvas.height * zoom) / 2);
+    applyTransform();
+    renderMap();
+}
+
 function renderMap() {
     if (!globalActiveMapImage || !ctx || !canvas) return;
-    
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    let dW = globalActiveMapImage.width || globalActiveMapImage.naturalWidth || canvas.width;
-    let dH = globalActiveMapImage.height || globalActiveMapImage.naturalHeight || canvas.height;
-    
-    ctx.drawImage(globalActiveMapImage, 0, 0, dW, dH);
+    ctx.drawImage(globalActiveMapImage, 0, 0, canvas.width, canvas.height);
 
     stageMarkers.forEach((m, idx) => {
         const checked = !!collectedStates[idx];
@@ -173,7 +181,7 @@ function renderMap() {
     buildChecklistUI();
 }
 
-function buildChecklistUI() {
+async function buildChecklistUI() {
     if (!checklistGrid) return;
     checklistGrid.innerHTML = '';
     stageMarkers.forEach((m, idx) => {
@@ -198,16 +206,62 @@ function buildChecklistUI() {
     const currentCollected = stageMarkers.filter((_, i) => collectedStates[i]).length;
     const stagePerc = stageMarkers.length ? Math.round((currentCollected / stageMarkers.length) * 100) : 0;
     
+    // UI Label Calculations Injector Matrix Optimization
     const stagePercEl = document.getElementById('stagePerc');
     const stageFillEl = document.getElementById('stageFill');
-    if (stagePercEl) stagePercEl.innerText = `${stagePerc}%`;
+    if (stagePercEl) stagePercEl.innerText = `${stagePerc}% [${currentCollected}/${stageMarkers.length}]`;
     if (stageFillEl) stageFillEl.style.width = `${stagePerc}%`;
     
-    let total = 0, done = 0;
-    STAGES.forEach(async s => {
-        if(s === currentStage) { total += stageMarkers.length; done += currentCollected; }
-        const totalStatsEl = document.getElementById('totalStats');
-        if (totalStatsEl) totalStatsEl.innerText = `${done}/${total}`;
+    // Global Matrix Verification Execution Sync
+    calculateGlobalTotals(currentCollected);
+}
+
+function calculateGlobalTotals(activeCollectedCount) {
+    if (!db) return;
+    let totalPieces = 0;
+    let totalCollected = 0;
+
+    const tx = db.transaction(["user_progress", "admin_coordinates"], "readonly");
+    const progressStore = tx.objectStore("user_progress");
+    const coordsStore = tx.objectStore("admin_coordinates");
+
+    let processedCount = 0;
+
+    STAGES.forEach(stg => {
+        let stgTotal = 0;
+        let stgCollected = 0;
+
+        // Fetch piece total counts safely
+        const coordReq = coordsStore.get(stg);
+        coordReq.onsuccess = () => {
+            if (coordReq.result) {
+                stgTotal = coordReq.result.length;
+            } else {
+                stgTotal = stg === currentStage ? stageMarkers.length : 0; // Temporary fallback if data doesn't exist yet
+            }
+            
+            const progReq = progressStore.get(stg);
+            progReq.onsuccess = () => {
+                const prog = progReq.result || {};
+                if (stg === currentStage) {
+                    stgCollected = activeCollectedCount;
+                } else {
+                    for(let k in prog) { if(prog[k]) stgCollected++; }
+                }
+
+                totalPieces += stgTotal;
+                totalCollected += stgCollected;
+                processedCount++;
+
+                if (processedCount === STAGES.length) {
+                    const globalPerc = totalPieces ? Math.round((totalCollected / totalPieces) * 100) : 0;
+                    const totalStatsEl = document.getElementById('totalStats');
+                    const totalFillEl = document.getElementById('totalFill');
+                    if (totalStatsEl) totalStatsEl.innerText = `${globalPerc}% [${totalCollected}/${totalPieces}]`;
+                    if (totalFillEl) totalFillEl.style.width = `${globalPerc}%`;
+                }
+            };
+        };
     });
 }
 
@@ -234,7 +288,6 @@ function setupGestureListeners() {
         else if (e.touches.length === 2) { isDragging = false; initialPinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); }
     }, {passive:true});
 
-    // FIX: Changed {false:false} to valid configuration syntax behavior {passive:false}
     viewport.addEventListener('touchmove', (e) => {
         if (e.touches.length === 1 && isDragging) { offsetX = e.touches[0].clientX - startX; offsetY = e.touches[0].clientY - startY; applyTransform(); }
         else if (e.touches.length === 2) {
@@ -265,16 +318,40 @@ function zoomCalc(m, fx, fy) {
     zoom = nz; applyTransform();
 }
 
-function setupGamepadPolling() {
+/* ==========================================================================
+   CROSS-PLATFORM ADVANCED HARDWARE CONTROLLER INTEGRATION ENGINE
+   ========================================================================== */
+function setupGamepadEngine() {
     window.addEventListener("gamepadconnected", () => {
         const loop = () => {
-            const p = navigator.getGamepads ? navigator.getGamepads()[0] : null;
-            if (p) {
-                if (Math.abs(p.axes[0]) > 0.15) offsetX -= p.axes[0] * 6;
-                if (Math.abs(p.axes[1]) > 0.15) offsetY -= p.axes[1] * 6;
-                if (p.buttons[7]?.value > 0.1) zoom *= 1.02; if (p.buttons[6]?.value > 0.1) zoom *= 0.98;
-                applyTransform();
+            const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+            const gp = gamepads[0];
+            if (!gp) return requestAnimationFrame(loop);
+
+            // Left Joystick / D-Pad: Handle Navigation Panning
+            if (Math.abs(gp.axes[0]) > 0.18) offsetX -= gp.axes[0] * 8;
+            if (Math.abs(gp.axes[1]) > 0.18) offsetY -= gp.axes[1] * 8;
+
+            // Right Joystick: Handle Infinite Scaling Magnification Zoom
+            if (Math.abs(gp.axes[3]) > 0.18) {
+                const centerViewportX = viewport ? viewport.offsetWidth / 2 : window.innerWidth / 2;
+                const centerViewportY = viewport ? viewport.offsetHeight / 2 : window.innerHeight / 2;
+                zoomCalc(gp.axes[3] > 0 ? 0.97 : 1.03, centerViewportX, centerViewportY);
             }
+
+            // Button A (South Interface Node): Toggle Selection Under Screen Center
+            const buttonSouth = gp.buttons[0]; 
+            if (buttonSouth.pressed && !lastButtonState[0]) {
+                if (viewport && canvas) {
+                    const cX = ((viewport.offsetWidth / 2) - offsetX) / zoom;
+                    const cY = ((viewport.offsetHeight / 2) - offsetY) / zoom;
+                    const hit = stageMarkers.findIndex(m => cX >= m.x && cX <= (m.x + 15) && cY >= m.y && cY <= (m.y + 22));
+                    if (hit !== -1) togglePiece(hit);
+                }
+            }
+            lastButtonState[0] = buttonSouth.pressed;
+
+            applyTransform();
             requestAnimationFrame(loop);
         };
         loop();
@@ -287,6 +364,8 @@ function adminManualAdd() {
     const viewCenterCanvasY = ((viewport.offsetHeight / 2) - offsetY) / zoom;
     stageMarkers.push({ x: Math.round(viewCenterCanvasX - 7.5), y: Math.round(viewCenterCanvasY - 11) });
     stageMarkers.sort((a, b) => a.x - b.x);
+    
+    if (db) db.transaction("admin_coordinates", "readwrite").objectStore("admin_coordinates").put(stageMarkers, currentStage);
     renderMap();
 }
 
@@ -295,44 +374,63 @@ function adminManualDelete() {
     const targetIdx = prompt(`Enter piece number to delete (1 - ${stageMarkers.length}):`);
     if (targetIdx && targetIdx > 0 && targetIdx <= stageMarkers.length) {
         stageMarkers.splice(targetIdx - 1, 1);
+        if (db) db.transaction("admin_coordinates", "readwrite").objectStore("admin_coordinates").put(stageMarkers, currentStage);
         renderMap();
     }
 }
 
-async function runMobileScanner() {
-    const input = document.getElementById('adminTemplateFileInput');
-    if (!input || !input.files.length) return alert("Please select your template PNG image first.");
-    
-    const tImg = await new Promise(r => { const img = new Image(); img.onload = () => r(img); img.src = URL.createObjectURL(input.files[0]); });
-    const bCanvas = document.createElement('canvas'); bCanvas.width = tImg.width; bCanvas.height = tImg.height;
-    const bCtx = bCanvas.getContext('2d'); bCtx.drawImage(tImg, 0, 0);
-    const rData = bCtx.getImageData(0, 0, tImg.width, tImg.height).data;
-    
-    const pts = [];
-    for (let i = 0; i < rData.length; i += 4) {
-        if (rData[i + 3] > 220) {
-            const idx = i / 4;
-            pts.push({ x: idx % tImg.width, y: Math.floor(idx / tImg.width), r: rData[i], g: rData[i+1], b: rData[i+2] });
-        }
-    }
+/* ==========================================================================
+   AUTOMATIC ZERO-TOUCH TEMPLATE LOOKUP SCANNER ENGINE
+   ========================================================================== */
+async function runAutoScanner() {
+    if (!isAdminMode) return;
+    try {
+        // Direct automated asset fetch layer injection path mapping lookup
+        const templateURL = `${BASE_PATH}assets/puzzlepiece_template.png`;
+        const res = await fetch(templateURL);
+        if(!res.ok) throw new Error("Template image file puzzlepiece_template.png could not be found inside the assets folder.");
 
-    if(!canvas || !ctx) return;
-    const mBuffer = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-    for (let y = 0; y < canvas.height - 22; y++) {
-        for (let x = 0; x < canvas.width - 15; x++) {
-            let match = true;
-            for (let p of pts) {
-                const tIdx = ((y + p.y) * canvas.width + (x + p.x)) * 4;
-                if (mBuffer[tIdx] !== p.r || mBuffer[tIdx+1] !== p.g || mBuffer[tIdx+2] !== p.b) { match = false; break; }
-            }
-            if (match && !stageMarkers.some(m => Math.abs(m.x - x) < 6 && Math.abs(m.y - y) < 6)) {
-                stageMarkers.push({ x: x, y: y });
+        const blob = await res.blob();
+        const tImg = await new Promise((resolve, reject) => { 
+            const img = new Image(); 
+            img.onload = () => resolve(img); 
+            img.onerror = () => reject();
+            img.src = URL.createObjectURL(blob); 
+        });
+
+        const bCanvas = document.createElement('canvas'); bCanvas.width = tImg.width; bCanvas.height = tImg.height;
+        const bCtx = bCanvas.getContext('2d'); bCtx.drawImage(tImg, 0, 0);
+        const rData = bCtx.getImageData(0, 0, tImg.width, tImg.height).data;
+        
+        const pts = [];
+        for (let i = 0; i < rData.length; i += 4) {
+            if (rData[i + 3] > 220) {
+                const idx = i / 4;
+                pts.push({ x: idx % tImg.width, y: Math.floor(idx / tImg.width), r: rData[i], g: rData[i+1], b: rData[i+2] });
             }
         }
+
+        if(!canvas || !ctx) return;
+        const mBuffer = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        for (let y = 0; y < canvas.height - 22; y++) {
+            for (let x = 0; x < canvas.width - 15; x++) {
+                let match = true;
+                for (let p of pts) {
+                    const tIdx = ((y + p.y) * canvas.width + (x + p.x)) * 4;
+                    if (mBuffer[tIdx] !== p.r || mBuffer[tIdx+1] !== p.g || mBuffer[tIdx+2] !== p.b) { match = false; break; }
+                }
+                if (match && !stageMarkers.some(m => Math.abs(m.x - x) < 6 && Math.abs(m.y - y) < 6)) {
+                    stageMarkers.push({ x: x, y: y });
+                }
+            }
+        }
+        stageMarkers.sort((a, b) => a.x - b.x);
+        if (db) db.transaction("admin_coordinates", "readwrite").objectStore("admin_coordinates").put(stageMarkers, currentStage);
+        renderMap();
+        alert("Automated scan profile parsing processing matrix complete.");
+    } catch(err) {
+        alert(err.message || "Auto Scanner couldn't find 'assets/puzzlepiece_template.png'. Please ensure it's in the repo.");
     }
-    stageMarkers.sort((a, b) => a.x - b.x);
-    renderMap();
-    alert("Scanning arrays completed.");
 }
 
 function exportMasterJSON() {
