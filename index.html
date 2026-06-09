@@ -2,46 +2,62 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sonic Pocket Adventure Piece Tracker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sonic Pocket Adventure - Puzzle Piece Tracker</title>
     <link rel="stylesheet" href="./style.css">
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
 <body>
 
-    <header>
-        <div class="stats-container">
-            <span>Stage Progress: <strong id="stagePerc">0%</strong></span>
-            <div class="progress-bar-container">
-                <div id="stageFill" class="progress-bar-fill"></div>
-            </div>
-            <span>Total Collected: <strong id="totalStats">0/0</strong></span>
-        </div>
-    </header>
-
     <div class="main-layout">
         
-        <div id="levelMenu" class="level-menu"></div>
+        <header class="tracker-header">
+            <div class="stats-panel">
+                <span class="label">STAGE PROGRESS:</span>
+                <span id="stagePerc" class="value">0%</span>
+                <div class="progress-bar-container">
+                    <div id="stageFill" class="progress-fill"></div>
+                </div>
+            </div>
+            <div class="stats-panel">
+                <span class="label">TOTAL PIECES:</span>
+                <span id="totalStats" class="value">0/0</span>
+            </div>
+        </header>
 
-        <div id="viewport" class="viewport">
+        <div class="viewport" id="viewport">
             <canvas id="canvas"></canvas>
         </div>
 
-        <div id="pieceChecklist" class="checklist-grid"></div>
+        <nav class="navigation-menu">
+            <h3>SELECT ZONE STAGE</h3>
+            <div id="levelMenu" class="level-grid">
+                </div>
+        </nav>
+
+        <section class="checklist-container">
+            <h3>PUZZLE PIECES STAGE CHECKLIST</h3>
+            <div id="pieceChecklist" class="checklist-grid">
+                </div>
+        </section>
+
+        <footer class="admin-ui" style="display: none;">
+            <div class="admin-controls-wrapper">
+                <h4>ADMIN AUTOMATED COORDINATE ENGINE CONTROL SUITE</h4>
+                <div class="btn-group">
+                    <button class="admin-btn add" onclick="adminManualAdd()">MANUAL MARKER ADD (VIEW CENTER)</button>
+                    <button class="admin-btn delete" onclick="adminManualDelete()">DELETE MARKER BY NUMBER ID</button>
+                    <button class="admin-btn export" onclick="exportMasterJSON()">EXPORT GENERATED DATA.JSON</button>
+                </div>
+                <div class="scanner-upload-block">
+                    <label for="adminTemplateFileInput" class="custom-file-label">LOAD TARGET PIECE RGBA TEMPLATE:</label>
+                    <input type="file" id="adminTemplateFileInput" accept="image/*" onchange="runMobileScanner()">
+                </div>
+            </div>
+        </footer>
 
     </div>
 
-    <div class="admin-ui" style="display: none; gap: 10px; padding: 10px; background: #220000; justify-content: center;">
-        <button onclick="adminManualAdd()">Add Piece At Center</button>
-        <button onclick="adminManualDelete()">Delete Piece By ID</button>
-        <button onclick="exportMasterJSON()">Export Coordinates JSON</button>
-        <label style="color: #fff; display: flex; align-items: center; gap: 5px;">
-            Scanner Template:
-            <input type="file" id="adminTemplateFileInput" accept="image/*">
-        </label>
-        <button onclick="runMobileScanner()">Execute Canvas Array Scan</button>
-    </div>
-
-    <script src="app.js"></script>
+    <script src="./app.js"></script>
 </body>
 </html>
