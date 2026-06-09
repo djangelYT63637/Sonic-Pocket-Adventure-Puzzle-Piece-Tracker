@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SONIC POCKET ADVENTURE: PIECE TRACKER - ENTERPRISE CORE ENGINE (v21.0)
+   SONIC POCKET ADVENTURE: PIECE TRACKER - ENTERPRISE CORE ENGINE (v22.0)
    ========================================================================== */
 
 const STAGES = [
@@ -34,14 +34,20 @@ const getBasePath = () => {
 };
 const BASE_PATH = getBasePath();
 
-// Global State Properties Engine Space
+// Global Context Values Engine Space
 let db = null, currentStage = STAGES[0], stageMarkers = [], collectedStates = {};
 let zoom = 0.5, offsetX = 0, offsetY = 0, isDragging = false, startX = 0, startY = 0, initialPinchDist = 0;
 let isAdminMode = new URLSearchParams(window.location.search).get('mode') === 'admin';
 let globalActiveMapImage = null;
 
+// Gamepad Matrix Focus Parameters
+let controllerFocusTarget = "stages"; // Options: "stages" | "checklist"
+let focusedStageIndex = 0;
+let focusedChecklistIndex = 0;
+let lastButtonState = {};
+let gamepadDebounceTimeout = 0;
+
 let canvas, ctx, viewport, levelMenu, checklistGrid;
-let lastButtonState = {}; // Used to handle clean gamepad button clicks without rapid-firing
 
 document.addEventListener('DOMContentLoaded', () => {
     canvas = document.getElementById('canvas');
@@ -52,7 +58,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('.admin-ui').forEach(el => el.style.display = isAdminMode ? 'flex' : 'none');
     
-    // Persistent Storage System Initializer Matrix
     const dbRequest = indexedDB.open("SPA_Community_Tracker_DB", 3);
     dbRequest.onupgradeneeded = (e) => {
         const d = e.target.result;
@@ -66,15 +71,16 @@ document.addEventListener('DOMContentLoaded', () => {
 function buildInterface() {
     if (!levelMenu) return;
     levelMenu.innerHTML = '';
-    STAGES.forEach(stg => {
+    STAGES.forEach((stg, idx) => {
         const btn = document.createElement('button');
         btn.className = 'level-btn';
+        btn.id = `stage-btn-${idx}`;
         btn.innerText = stg;
-        btn.onclick = () => loadStageData(stg);
+        btn.onclick = () => { focusedStageIndex = idx; loadStageData(stg); };
         levelMenu.appendChild(btn);
     });
     setupGestureListeners();
-    setupGamepadEngine();
+    setupGamepadSystem();
     loadStageData(currentStage);
 }
 
@@ -82,7 +88,6 @@ async function loadStageData(stageName) {
     currentStage = stageName;
     document.querySelectorAll('.level-btn').forEach(b => b.classList.toggle('active', b.innerText === stageName));
 
-    // 1. Coordinates Database Matrix Loading Core
     let customCoords = null;
     if (db) {
         customCoords = await new Promise(r => {
@@ -106,7 +111,6 @@ async function loadStageData(stageName) {
     }
     stageMarkers.sort((a, b) => a.x - b.x);
 
-    // 2. Collection Progress Metrics Load Block
     collectedStates = await new Promise(r => {
         if (!db) return r({});
         const req = db.transaction("user_progress", "readonly").objectStore("user_progress").get(stageName);
@@ -118,11 +122,10 @@ async function loadStageData(stageName) {
     const targetSrcURL = `${BASE_PATH}maps/${fileName}?t=${new Date().getTime()}`;
     
     const imgWorker = new Image();
-    imgWorker.crossOrigin = "anonymous";
+    // FIX: Removed crossOrigin assignment to fix cross-site blocking errors in mobile engines
     
     imgWorker.onload = () => {
         globalActiveMapImage = imgWorker;
-        
         let targetWidth = imgWorker.width || imgWorker.naturalWidth || 2048;
         let targetHeight = imgWorker.height || imgWorker.naturalHeight || 512;
         
@@ -142,7 +145,7 @@ async function loadStageData(stageName) {
             canvas.style.width = "100%"; canvas.style.height = "auto";
             ctx.fillStyle = "#000c22"; ctx.fillRect(0, 0, 600, 340);
             ctx.fillStyle = "#ff3333"; ctx.font = "8px 'Press Start 2P'";
-            ctx.fillText("RENDER PIPELINE CRITICAL DISCONNECTED ERR", 20, 50);
+            ctx.fillText("IMAGE LOADING PIPELINE REFUSED BY DEVICE ENGINE", 20, 50);
         }
         buildChecklistUI();
     };
@@ -187,9 +190,13 @@ async function buildChecklistUI() {
     stageMarkers.forEach((m, idx) => {
         const item = document.createElement('div');
         item.className = `check-item ${collectedStates[idx] ? 'collected' : ''}`;
+        item.id = `check-item-${idx}`;
         item.innerText = `#${idx + 1}`;
         item.onclick = (e) => {
             e.stopPropagation();
+            focusedChecklistIndex = idx;
+            controllerFocusTarget = "checklist";
+            focusTargetItem();
             zoom = 2.5;
             offsetX = (viewport.offsetWidth / 2) - ((m.x + 7.5) * zoom);
             offsetY = (viewport.offsetHeight / 2) - ((m.y + 11) * zoom);
@@ -206,53 +213,34 @@ async function buildChecklistUI() {
     const currentCollected = stageMarkers.filter((_, i) => collectedStates[i]).length;
     const stagePerc = stageMarkers.length ? Math.round((currentCollected / stageMarkers.length) * 100) : 0;
     
-    // UI Label Calculations Injector Matrix Optimization
     const stagePercEl = document.getElementById('stagePerc');
     const stageFillEl = document.getElementById('stageFill');
     if (stagePercEl) stagePercEl.innerText = `${stagePerc}% [${currentCollected}/${stageMarkers.length}]`;
     if (stageFillEl) stageFillEl.style.width = `${stagePerc}%`;
     
-    // Global Matrix Verification Execution Sync
     calculateGlobalTotals(currentCollected);
+    focusTargetItem();
 }
 
 function calculateGlobalTotals(activeCollectedCount) {
     if (!db) return;
-    let totalPieces = 0;
-    let totalCollected = 0;
-
+    let totalPieces = 0, totalCollected = 0, processedCount = 0;
     const tx = db.transaction(["user_progress", "admin_coordinates"], "readonly");
     const progressStore = tx.objectStore("user_progress");
     const coordsStore = tx.objectStore("admin_coordinates");
 
-    let processedCount = 0;
-
     STAGES.forEach(stg => {
-        let stgTotal = 0;
-        let stgCollected = 0;
-
-        // Fetch piece total counts safely
+        let stgTotal = 0, stgCollected = 0;
         const coordReq = coordsStore.get(stg);
         coordReq.onsuccess = () => {
-            if (coordReq.result) {
-                stgTotal = coordReq.result.length;
-            } else {
-                stgTotal = stg === currentStage ? stageMarkers.length : 0; // Temporary fallback if data doesn't exist yet
-            }
-            
+            stgTotal = coordReq.result ? coordReq.result.length : (stg === currentStage ? stageMarkers.length : 0);
             const progReq = progressStore.get(stg);
             progReq.onsuccess = () => {
                 const prog = progReq.result || {};
-                if (stg === currentStage) {
-                    stgCollected = activeCollectedCount;
-                } else {
-                    for(let k in prog) { if(prog[k]) stgCollected++; }
-                }
+                if (stg === currentStage) stgCollected = activeCollectedCount;
+                else { for(let k in prog) { if(prog[k]) stgCollected++; } }
 
-                totalPieces += stgTotal;
-                totalCollected += stgCollected;
-                processedCount++;
-
+                totalPieces += stgTotal; totalCollected += stgCollected; processedCount++;
                 if (processedCount === STAGES.length) {
                     const globalPerc = totalPieces ? Math.round((totalCollected / totalPieces) * 100) : 0;
                     const totalStatsEl = document.getElementById('totalStats');
@@ -319,37 +307,75 @@ function zoomCalc(m, fx, fy) {
 }
 
 /* ==========================================================================
-   CROSS-PLATFORM ADVANCED HARDWARE CONTROLLER INTEGRATION ENGINE
+   ADVANCED METADATA CONTROLLER ENGINE: D-PAD SELECTION MATRIX
    ========================================================================== */
-function setupGamepadEngine() {
+function setupGamepadSystem() {
     window.addEventListener("gamepadconnected", () => {
         const loop = () => {
             const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
             const gp = gamepads[0];
             if (!gp) return requestAnimationFrame(loop);
 
-            // Left Joystick / D-Pad: Handle Navigation Panning
+            // Stick 1 (Left Analog): Map Camera Translation Panning 
             if (Math.abs(gp.axes[0]) > 0.18) offsetX -= gp.axes[0] * 8;
             if (Math.abs(gp.axes[1]) > 0.18) offsetY -= gp.axes[1] * 8;
 
-            // Right Joystick: Handle Infinite Scaling Magnification Zoom
+            // Stick 2 (Right Analog): Map Scaling Center Zoom
             if (Math.abs(gp.axes[3]) > 0.18) {
-                const centerViewportX = viewport ? viewport.offsetWidth / 2 : window.innerWidth / 2;
-                const centerViewportY = viewport ? viewport.offsetHeight / 2 : window.innerHeight / 2;
-                zoomCalc(gp.axes[3] > 0 ? 0.97 : 1.03, centerViewportX, centerViewportY);
+                const cX = viewport ? viewport.offsetWidth / 2 : window.innerWidth / 2;
+                const cY = viewport ? viewport.offsetHeight / 2 : window.innerHeight / 2;
+                zoomCalc(gp.axes[3] > 0 ? 0.96 : 1.04, cX, cY);
             }
 
-            // Button A (South Interface Node): Toggle Selection Under Screen Center
-            const buttonSouth = gp.buttons[0]; 
-            if (buttonSouth.pressed && !lastButtonState[0]) {
-                if (viewport && canvas) {
-                    const cX = ((viewport.offsetWidth / 2) - offsetX) / zoom;
-                    const cY = ((viewport.offsetHeight / 2) - offsetY) / zoom;
-                    const hit = stageMarkers.findIndex(m => cX >= m.x && cX <= (m.x + 15) && cY >= m.y && cY <= (m.y + 22));
-                    if (hit !== -1) togglePiece(hit);
+            // D-Pad Menu Scanning Handler Logic
+            const now = Date.now();
+            if (now > gamepadDebounceTimeout) {
+                let dpadUp = gp.buttons[12]?.pressed;
+                let dpadDown = gp.buttons[13]?.pressed;
+                let dpadLeft = gp.buttons[14]?.pressed;
+                let dpadRight = gp.buttons[15]?.pressed;
+
+                if (dpadUp) {
+                    controllerFocusTarget = "stages";
+                    focusedStageIndex = (focusedStageIndex - 1 + STAGES.length) % STAGES.length;
+                    focusTargetItem(); gamepadDebounceTimeout = now + 180;
+                } else if (dpadDown) {
+                    controllerFocusTarget = "stages";
+                    focusedStageIndex = (focusedStageIndex + 1) % STAGES.length;
+                    focusTargetItem(); gamepadDebounceTimeout = now + 180;
+                } else if (dpadLeft) {
+                    if (stageMarkers.length) {
+                        controllerFocusTarget = "checklist";
+                        focusedChecklistIndex = (focusedChecklistIndex - 1 + stageMarkers.length) % stageMarkers.length;
+                        focusTargetItem(); triggerChecklistTeleport();
+                    }
+                    gamepadDebounceTimeout = now + 180;
+                } else if (dpadRight) {
+                    if (stageMarkers.length) {
+                        controllerFocusTarget = "checklist";
+                        focusedChecklistIndex = (focusedChecklistIndex + 1) % stageMarkers.length;
+                        focusTargetItem(); triggerChecklistTeleport();
+                    }
+                    gamepadDebounceTimeout = now + 180;
                 }
             }
-            lastButtonState[0] = buttonSouth.pressed;
+
+            // Button A (South): Action Select Execution Node
+            if (gp.buttons[0].pressed && !lastButtonState[0]) {
+                if (controllerFocusTarget === "stages") {
+                    loadStageData(STAGES[focusedStageIndex]);
+                } else if (controllerFocusTarget === "checklist" && stageMarkers.length) {
+                    togglePiece(focusedChecklistIndex);
+                }
+            }
+            
+            // Button X (North): View Position Reset Command
+            if (gp.buttons[3].pressed && !lastButtonState[3]) {
+                centerMapInViewport();
+            }
+
+            lastButtonState[0] = gp.buttons[0].pressed;
+            lastButtonState[3] = gp.buttons[3].pressed;
 
             applyTransform();
             requestAnimationFrame(loop);
@@ -358,13 +384,32 @@ function setupGamepadEngine() {
     });
 }
 
+function focusTargetItem() {
+    document.querySelectorAll('.level-btn, .check-item').forEach(el => el.classList.remove('gamepad-focused'));
+    if (controllerFocusTarget === "stages") {
+        const target = document.getElementById(`stage-btn-${focusedStageIndex}`);
+        if (target) { target.classList.add('gamepad-focused'); target.scrollIntoView({ block: 'nearest' }); }
+    } else {
+        const target = document.getElementById(`check-item-${focusedChecklistIndex}`);
+        if (target) { target.classList.add('gamepad-focused'); target.scrollIntoView({ block: 'nearest' }); }
+    }
+}
+
+function triggerChecklistTeleport() {
+    if (focusedChecklistIndex < 0 || focusedChecklistIndex >= stageMarkers.length || !viewport) return;
+    const m = stageMarkers[focusedChecklistIndex];
+    zoom = 2.5;
+    offsetX = (viewport.offsetWidth / 2) - ((m.x + 7.5) * zoom);
+    offsetY = (viewport.offsetHeight / 2) - ((m.y + 11) * zoom);
+    applyTransform();
+}
+
 function adminManualAdd() {
     if (!isAdminMode || !viewport) return;
     const viewCenterCanvasX = ((viewport.offsetWidth / 2) - offsetX) / zoom;
     const viewCenterCanvasY = ((viewport.offsetHeight / 2) - offsetY) / zoom;
     stageMarkers.push({ x: Math.round(viewCenterCanvasX - 7.5), y: Math.round(viewCenterCanvasY - 11) });
     stageMarkers.sort((a, b) => a.x - b.x);
-    
     if (db) db.transaction("admin_coordinates", "readwrite").objectStore("admin_coordinates").put(stageMarkers, currentStage);
     renderMap();
 }
@@ -380,15 +425,15 @@ function adminManualDelete() {
 }
 
 /* ==========================================================================
-   AUTOMATIC ZERO-TOUCH TEMPLATE LOOKUP SCANNER ENGINE
+   FIXED DATA ASSET TARGET LOOKUP PARSER
    ========================================================================== */
 async function runAutoScanner() {
     if (!isAdminMode) return;
     try {
-        // Direct automated asset fetch layer injection path mapping lookup
-        const templateURL = `${BASE_PATH}assets/puzzlepiece_template.png`;
+        // FIX: Re-targeted path specifically to locate puzzle-piece.png image asset
+        const templateURL = `${BASE_PATH}assets/puzzle-piece.png`;
         const res = await fetch(templateURL);
-        if(!res.ok) throw new Error("Template image file puzzlepiece_template.png could not be found inside the assets folder.");
+        if(!res.ok) throw new Error("Template image 'assets/puzzle-piece.png' not found.");
 
         const blob = await res.blob();
         const tImg = await new Promise((resolve, reject) => { 
@@ -427,9 +472,9 @@ async function runAutoScanner() {
         stageMarkers.sort((a, b) => a.x - b.x);
         if (db) db.transaction("admin_coordinates", "readwrite").objectStore("admin_coordinates").put(stageMarkers, currentStage);
         renderMap();
-        alert("Automated scan profile parsing processing matrix complete.");
+        alert("Automated scan parsing matrix complete.");
     } catch(err) {
-        alert(err.message || "Auto Scanner couldn't find 'assets/puzzlepiece_template.png'. Please ensure it's in the repo.");
+        alert(err.message);
     }
 }
 
