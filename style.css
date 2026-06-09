@@ -65,6 +65,7 @@ header h1 {
     display: flex;
     flex-direction: column;
     flex: 1;
+    height: calc(100vh - 44px); /* CRITICAL FIXED LAYOUT DIMENSION MATRIX: Prevents container collapse */
     overflow: hidden;
 }
 
@@ -215,6 +216,7 @@ header h1 {
     background: #11111d;
     position: relative;
     overflow: hidden;
+    min-height: 200px; /* CRITICAL BLOCK SAFETY LIMIT PROTECTION */
 }
 
 /* --- Navigation & File Toolbar --- */
@@ -258,6 +260,8 @@ button.reset-btn {
 /* --- Infinite Panning Canvas Container --- */
 .viewport {
     flex: 1;
+    width: 100%;
+    height: 100%;
     position: relative;
     overflow: hidden;
     cursor: grab;
@@ -270,6 +274,9 @@ button.reset-btn {
 
 canvas {
     position: absolute;
+    top: 0;
+    left: 0;
+    display: block; /* CRITICAL FIX: Ensures elements obey block model dimensions */
     image-rendering: pixelated;
     image-rendering: crisp-edges; /* Modern fallback */
     transform-origin: 0 0;
@@ -280,6 +287,7 @@ canvas {
 @media (min-orientation: landscape) and (min-width: 768px) {
     .main-layout {
         flex-direction: row;
+        height: calc(100vh - 44px);
     }
     .dashboard {
         width: 320px;
