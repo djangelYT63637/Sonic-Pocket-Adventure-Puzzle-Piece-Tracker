@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SONIC POCKET ADVENTURE: PIECE TRACKER - DEFINITIVE ENGINE (v8.0)
+   SONIC POCKET ADVENTURE: PIECE TRACKER - DEFINITIVE ENGINE (v9.0)
    ========================================================================== */
 
 // --- Configuration Constants ---
@@ -13,17 +13,20 @@ const STAGES = [
 // --- Engine State Management ---
 let db = null;
 let currentStage = STAGES[0];
-let stageMarkers = [];     // Raw static positions from master JSON data
-let collectedStates = {};  // User checkmarks stored locally: { "index": true/false }
+let stageMarkers = [];     // Vector markers layout configuration
+let collectedStates = {};  // User checkbox states tracked locally
 let activeMapImage = new Image();
 
-// Viewport Zoom & Translation Vectors
+// Viewport Vector Coordinates
 let zoom = 0.5;
 let offsetX = 20;
 let offsetY = 20;
 let isDragging = false;
 let startX = 0, startY = 0;
 let initialPinchDistance = 0;
+
+// Security Protocol Mode Status
+let isAdminMode = false;
 
 // DOM Cache Elements
 const canvas = document.getElementById('canvas');
@@ -37,18 +40,32 @@ const checklistGrid = document.getElementById('pieceChecklist');
    ========================================================================== */
 
 document.addEventListener('DOMContentLoaded', () => {
+    evaluateSecurityAccessMode();
     initDatabase();
 });
 
+function evaluateSecurityAccessMode() {
+    const urlParams = new URLSearchParams(window.location.search);
+    isAdminMode = (urlParams.get('mode') === 'admin');
+    
+    // Toggle administration pipeline interface layouts dynamically
+    const adminUIPanels = document.querySelectorAll('.admin-ui');
+    adminUIPanels.forEach(panel => {
+        panel.style.display = isAdminMode ? 'flex' : 'none';
+    });
+}
+
 function initDatabase() {
-    // Open specialized IndexedDB instance matching the GitHub project architecture
-    const dbRequest = indexedDB.open("SPA_Community_Tracker_DB", 1);
+    const dbRequest = indexedDB.open("SPA_Community_Tracker_DB", 2);
 
     dbRequest.onupgradeneeded = (event) => {
         const database = event.target.result;
-        // Store personal checklist flags per level
         if (!database.objectStoreNames.contains("user_progress")) {
             database.createObjectStore("user_progress");
+        }
+        // Admin workspace cache parameters storage
+        if (!database.objectStoreNames.contains("admin_assets")) {
+            database.createObjectStore("admin_assets");
         }
     };
 
@@ -58,7 +75,7 @@ function initDatabase() {
     };
 
     dbRequest.onerror = () => {
-        console.error("Local database initialization crashed. Progress will run in-memory fallback mode.");
+        console.error("Database layer fault. Operating inside standard secure volatile memory.");
         buildInterface();
     };
 }
@@ -79,7 +96,7 @@ async function buildInterface() {
     });
 
     setupGestureListeners();
-    // Default boot setup loading the initial zone layout
+    setupGamepadPolling();
     await loadStageData(currentStage);
     updateGlobalCompletionBar();
 }
@@ -87,20 +104,23 @@ async function buildInterface() {
 async function loadStageData(stageName) {
     currentStage = stageName;
 
-    // Toggle CSS Active states elegantly across the grid UI elements
     document.querySelectorAll('.level-btn').forEach(btn => {
         btn.classList.toggle('active', btn.getAttribute('data-stage') === stageName);
     });
 
-    // 1. Fetch fixed piece vector locations from master JSON and sort Left-To-Right
+    // Reset current transient coordinate map state arrays
+    stageMarkers = [];
+
+    // 1. Fetch system reference layouts dynamically out of GitHub Master JSON
     stageMarkers = await fetchStageMarkersFromJSON(stageName);
     stageMarkers.sort((a, b) => a.x - b.x);
 
-    // 2. Load personal checked storage map metrics out of local IndexedDB memory
+    // 2. Load checked checkboxes context array indicators
     collectedStates = await fetchUserProgressFromDB(stageName);
 
-    // 3. Request background asset dynamically map routing path from repository system
-    const mapAssetPath = `./Maps/${encodeURIComponent(stageName)}.png`;
+    // 3. Normalized sanitized lower-case asset filename structures mapping
+    const sanitizedStageName = stageName.toLowerCase().replace(/ /g, '-');
+    const mapAssetPath = `./Maps/${sanitizedStageName}.png`;
     
     activeMapImage = new Image();
     activeMapImage.src = mapAssetPath;
@@ -113,32 +133,30 @@ async function loadStageData(stageName) {
     };
 
     activeMapImage.onerror = () => {
-        // Fallback placeholder rendering frame logic if map resource yields 404 tracking links
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        canvas.width = 400;
-        canvas.height = 300;
+        canvas.width = 800;
+        canvas.height = 400;
         ctx.fillStyle = "#000c22";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "#ffffff";
-        ctx.font = "8px 'Press Start 2P'";
-        ctx.fillText("MAP NOT DETECTED IN /Maps/", 20, 150);
+        ctx.font = "10px 'Press Start 2P'";
+        ctx.fillText(`MISSING ASSET: /Maps/${sanitizedStageName}.png`, 40, 200);
         buildChecklistUI();
     };
 }
 
 /* ==========================================================================
-   3. MASTER REPOSITORY DATA LOADERS
+   3. MASTER STORAGE RETRIEVAL & WRITERS
    ========================================================================== */
 
 async function fetchStageMarkersFromJSON(stageName) {
     try {
-        // Grabs master vector coordinates sheet template configuration dynamically out of Assets tree
         const response = await fetch('./Assets/PuzzlePieces_Data.json');
-        if (!response.ok) throw new Error("JSON asset fetch mismatch context");
+        if (!response.ok) throw new Error("JSON file target offline");
         const globalData = await response.json();
         return globalData[stageName] || [];
     } catch (error) {
-        console.warn(`Master compilation database read error. Reverting structural arrays...`);
+        console.warn("Public configuration JSON missing or running inside fresh admin context layout initializing arrays.");
         return []; 
     }
 }
@@ -166,8 +184,24 @@ function saveUserProgressToDB() {
     updateGlobalCompletionBar();
 }
 
+function saveAdminAsset(key, fileBlob) {
+    if (!db) return;
+    const transaction = db.transaction("admin_assets", "readwrite");
+    transaction.objectStore("admin_assets").put(fileBlob, key);
+}
+
+function getAdminAsset(key) {
+    return new Promise((resolve) => {
+        if (!db) return resolve(null);
+        const transaction = db.transaction("admin_assets", "readonly");
+        const request = transaction.objectStore("admin_assets").get(key);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => resolve(null);
+    });
+}
+
 /* ==========================================================================
-   4. HARDWARE-ACCELERATED INPUT GESTURE STREAM ENGINE
+   4. INPUT MANAGEMENT MATRIX (TOUCH, MOUSE & GAMEPAD CONTROLLER)
    ========================================================================== */
 
 function setupGestureListeners() {
@@ -189,12 +223,12 @@ function setupGestureListeners() {
 
     viewport.onwheel = (e) => {
         e.preventDefault();
-        const zoomIntensity = 0.12;
-        const delta = e.deltaY > 0 ? (1 - zoomIntensity) : (1 + zoomIntensity);
+        const intensity = 0.15;
+        const delta = e.deltaY > 0 ? (1 - intensity) : (1 + intensity);
         executeCalculatedZoom(delta, e.clientX, e.clientY);
     };
 
-    // --- Smartphone Touch Gesture Tracking Array ---
+    // --- Smartphone Touch Panning & Multi-Touch Scaling Engine ---
     viewport.addEventListener('touchstart', (e) => {
         if (e.touches.length === 1) {
             isDragging = true;
@@ -215,7 +249,7 @@ function setupGestureListeners() {
             offsetY = e.touches[0].clientY - startY;
             applyViewportTransform();
         } else if (e.touches.length === 2) {
-            e.preventDefault(); // Prevents modern elastic frame bouncing issues while pinch scaling
+            e.preventDefault();
             const currentDistance = Math.hypot(
                 e.touches[0].clientX - e.touches[1].clientX,
                 e.touches[0].clientY - e.touches[1].clientY
@@ -224,8 +258,7 @@ function setupGestureListeners() {
             const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
             
             const scaleFactor = currentDistance / initialPinchDistance;
-            // Dampen scale velocity multiplier limits dynamically
-            const boundedFactor = Math.min(Math.max(scaleFactor, 0.92), 1.08);
+            const boundedFactor = Math.min(Math.max(scaleFactor, 0.90), 1.10);
             
             executeCalculatedZoom(boundedFactor, midX, midY);
             initialPinchDistance = currentDistance;
@@ -237,30 +270,39 @@ function setupGestureListeners() {
         initialPinchDistance = 0;
     });
 
-    // --- Core Canvas Pointer Tap Context Selection ---
+    // --- Core Canvas Pointer Tap Processing Systems ---
     canvas.onclick = (e) => {
+        if (isDragging) return;
         const bounds = canvas.getBoundingClientRect();
-        // Convert screen pixel elements space backward past modern linear translation calculations
         const canvasX = (e.clientX - bounds.left) / zoom;
         const canvasY = (e.clientY - bounds.top) / zoom;
 
-        // Trace bounding-box interactions across custom standard template measurements (15x22 pixels)
         const hitIndex = stageMarkers.findIndex(marker => {
             return canvasX >= marker.x && canvasX <= (marker.x + 15) &&
                    canvasY >= marker.y && canvasY <= (marker.y + 22);
         });
 
         if (hitIndex !== -1) {
-            togglePieceState(hitIndex);
+            if (isAdminMode && e.shiftKey) {
+                // Erase feature payload if shift-clicked inside developer admin console environment
+                stageMarkers.splice(hitIndex, 1);
+                renderMapMatrix();
+            } else {
+                togglePieceState(hitIndex);
+            }
+        } else if (isAdminMode) {
+            // Drop manual marker pinpoint node seamlessly if blank space is clicked
+            stageMarkers.push({ x: Math.round(canvasX - 7.5), y: Math.round(canvasY - 11) });
+            stageMarkers.sort((a, b) => a.x - b.x);
+            renderMapMatrix();
         }
     };
 }
 
 function executeCalculatedZoom(multiplier, focalX, focalY) {
-    const targetZoom = Math.min(Math.max(0.15, zoom * multiplier), 8.0);
+    const targetZoom = Math.min(Math.max(0.1, zoom * multiplier), 10.0);
     const viewBounds = viewport.getBoundingClientRect();
     
-    // Scale tracking shifts smoothly into mouse focal origin targets
     const relativeX = focalX - viewBounds.left - offsetX;
     const relativeY = focalY - viewBounds.top - offsetY;
     
@@ -272,15 +314,43 @@ function executeCalculatedZoom(multiplier, focalX, focalY) {
 }
 
 function applyViewportTransform() {
-    // Utilize lightning fast GPU composite acceleration metrics
     canvas.style.transform = `translate3d(${offsetX}px, ${offsetY}px, 0px) scale(${zoom})`;
 }
 
 function resetViewCoordinates() {
     zoom = window.innerHeight > window.innerWidth ? 0.35 : 0.6;
-    offsetX = 25;
-    offsetY = 20;
+    offsetX = 30;
+    offsetY = 30;
     applyViewportTransform();
+}
+
+// --- Console Control Mapping Architecture (Gamepad Navigation API) ---
+function setupGamepadPolling() {
+    window.addEventListener("gamepadconnected", () => {
+        console.log("Controller mapping recognized successfully.");
+        tickGamepadStateLoop();
+    });
+}
+
+function tickGamepadStateLoop() {
+    const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+    const pad = gamepads[0];
+    
+    if (pad) {
+        // Left Analog Stick Controls Viewport Pan Translation Logic Directionals
+        const deadzone = 0.15;
+        const speed = 8;
+        
+        if (Math.abs(pad.axes[0]) > deadzone) offsetX -= pad.axes[0] * speed;
+        if (Math.abs(pad.axes[1]) > deadzone) offsetY -= pad.axes[1] * speed;
+        
+        // Triggers Manage Dynamic Zoom Modifiers (Right/Left Trigger Action)
+        if (pad.buttons[7] && pad.buttons[7].value > 0.1) zoom *= 1.03; // RT Zoom In
+        if (pad.buttons[6] && pad.buttons[6].value > 0.1) zoom *= 0.97; // LT Zoom Out
+
+        applyViewportTransform();
+    }
+    requestAnimationFrame(tickGamepadStateLoop);
 }
 
 /* ==========================================================================
@@ -297,12 +367,19 @@ function renderMapMatrix() {
         const isCollected = !!collectedStates[index];
         
         ctx.lineWidth = 3;
-        ctx.strokeStyle = isCollected ? '#444444' : '#00ff41'; // Color coded dark gray vs vibrant emerald green
+        ctx.strokeStyle = isCollected ? '#444444' : '#00ff41';
         ctx.strokeRect(marker.x, marker.y, 15, 22);
 
         if (isCollected) {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.65)'; // Pixel dimming overlay layer
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
             ctx.fillRect(marker.x, marker.y, 15, 22);
+        }
+        
+        if (isAdminMode) {
+            // Render index numbering elements context to streamline master evaluation checkouts
+            ctx.fillStyle = '#ffe700';
+            ctx.font = "7px 'Press Start 2P'";
+            ctx.fillText(index + 1, marker.x, marker.y - 4);
         }
     });
 
@@ -322,20 +399,29 @@ function buildChecklistUI() {
         item.className = `check-item ${isCollected ? 'collected' : ''}`;
         item.innerText = `#${index + 1}`;
 
-        // Standard Click Handler: Automatically pans camera directly to selected target piece bounds
         item.onclick = (e) => {
             e.stopPropagation();
             teleportToPieceVector(marker);
         };
 
-        // Right-Click (Desktop) or Long Press/Double Tap (Mobile Platform) Toggles State
         item.oncontextmenu = (e) => {
             e.preventDefault();
-            togglePieceState(index);
+            if (isAdminMode && e.shiftKey) {
+                stageMarkers.splice(index, 1);
+                renderMapMatrix();
+            } else {
+                togglePieceState(index);
+            }
         };
         
-        // Secondary standard alternate activation mapping triggers for streamlined convenience
         item.addEventListener('dblclick', () => togglePieceState(index));
+
+        // Touch long-press simulation proxy framework mapping
+        let pressTimer;
+        item.addEventListener('touchstart', () => {
+            pressTimer = setTimeout(() => { togglePieceState(index); }, 600);
+        }, { passive: true });
+        item.addEventListener('touchend', () => clearTimeout(pressTimer));
 
         checklistGrid.appendChild(item);
     });
@@ -350,7 +436,7 @@ function togglePieceState(index) {
 }
 
 function teleportToPieceVector(marker) {
-    zoom = 2.5; // Precise targeted tracking zoom factor
+    zoom = 2.5;
     offsetX = (viewport.offsetWidth / 2) - ((marker.x + 7.5) * zoom);
     offsetY = (viewport.offsetHeight / 2) - ((marker.y + 11) * zoom);
     applyViewportTransform();
@@ -392,6 +478,98 @@ async function updateGlobalCompletionBar() {
     document.getElementById('totalFill').style.width = `${globalPercentage}%`;
 }
 
-// --- GLOBAL EXPOSED INTERACTION PIPELINES (HTML LINKED UI OPERATIONS) ---
-window.zoomToPiece = (idx) => { if (idx === -1) resetViewCoordinates(); };
+/* ==========================================================================
+   8. ADMIN EXCLUSIVE SUITE PIPELINES (AUTOMATIC 100% MATCH SCANNER)
+   ========================================================================== */
 
+async function executionTemplateAutomatedScan() {
+    const templateInput = document.getElementById('adminTemplateFileInput');
+    if (!templateInput.files.length) return alert("Upload template piece (.png) sequence marker element first!");
+    
+    const templateImg = await resolveImageAsyncLoader(URL.createObjectURL(templateInput.files[0]));
+    const templatePixels = extractPixelColorGridBuffer(templateImg);
+    
+    // Scan direct context off image data dimensions
+    const mapWidth = canvas.width;
+    const mapHeight = canvas.height;
+    const mapDataBuffer = ctx.getImageData(0, 0, mapWidth, mapHeight).data;
+
+    // Execute standard mathematical scanning convolution arrays
+    for (let y = 0; y < mapHeight - 22; y += 1) {
+        for (let x = 0; x < mapWidth - 15; x += 1) {
+            let isExactMatch = true;
+            
+            for (let p of templatePixels) {
+                const targetPixelIdx = ((y + p.y) * mapWidth + (x + p.x)) * 4;
+                if (mapDataBuffer[targetPixelIdx] !== p.r || 
+                    mapDataBuffer[targetPixelIdx + 1] !== p.g || 
+                    mapDataBuffer[targetPixelIdx + 2] !== p.b) {
+                    isExactMatch = false;
+                    break;
+                }
+            }
+
+            if (isExactMatch) {
+                const isDuplicate = stageMarkers.some(m => Math.abs(m.x - x) < 6 && Math.abs(m.y - y) < 6);
+                if (!isDuplicate) {
+                    stageMarkers.push({ x: x, y: y });
+                }
+            }
+        }
+    }
+
+    stageMarkers.sort((a, b) => a.x - b.x);
+    renderMapMatrix();
+    alert("Scan matrix operation concluded successfully. Check matching arrays.");
+}
+
+async function exportSystemMasterJSON() {
+    const compiledOutput = {};
+    for (const stage of STAGES) {
+        if (stage === currentStage) {
+            compiledOutput[stage] = stageMarkers.map(m => ({ x: Math.round(m.x), y: Math.round(m.y) }));
+        } else {
+            const saved = await fetchStageMarkersFromJSON(stage);
+            compiledOutput[stage] = saved.map(m => ({ x: Math.round(m.x), y: Math.round(m.y) }));
+        }
+    }
+    
+    const dataBlob = new Blob([JSON.stringify(compiledOutput, null, 4)], { type: 'application/json' });
+    const temporaryLink = document.createElement('a');
+    temporaryLink.href = URL.createObjectURL(dataBlob);
+    temporaryLink.download = 'PuzzlePieces_Data.json';
+    temporaryLink.click();
+}
+
+function extractPixelColorGridBuffer(imgElement) {
+    const bufferCanvas = document.createElement('canvas');
+    bufferCanvas.width = imgElement.width;
+    bufferCanvas.height = imgElement.height;
+    const bufferCtx = bufferCanvas.getContext('2d');
+    bufferCtx.drawImage(imgElement, 0, 0);
+    
+    const rawData = bufferCtx.getImageData(0, 0, imgElement.width, imgElement.height).data;
+    const pointArray = [];
+    
+    for (let i = 0; i < rawData.length; i += 4) {
+        if (rawData[i + 3] > 220) { // Discard alpha-transparent backgrounds logic
+            const idx = i / 4;
+            pointArray.push({
+                x: idx % imgElement.width,
+                y: Math.floor(idx / imgElement.width),
+                r: rawData[i],
+                g: rawData[i + 1],
+                b: rawData[i + 2]
+            });
+        }
+    }
+    return pointArray;
+}
+
+function resolveImageAsyncLoader(sourceString) {
+    return new Promise(r => { const i = new Image(); i.onload = () => r(i); i.src = sourceString; });
+}
+
+// --- Dynamic Utility Linkage ---
+window.triggerAdminInput = (id) => document.getElementById(id).click();
+window.zoomToPiece = (idx) => { if (idx === -1) resetViewCoordinates(); };
