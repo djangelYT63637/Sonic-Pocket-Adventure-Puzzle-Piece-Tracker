@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SONIC POCKET ADVENTURE: PIECE TRACKER - DEFINITIVE ENGINE (v16.0)
+   SONIC POCKET ADVENTURE: PIECE TRACKER - DEFINITIVE ENGINE (v17.0)
    ========================================================================== */
 
 // --- Configuration Constants ---
@@ -43,7 +43,6 @@ let db = null, currentStage = STAGES[0], stageMarkers = [], collectedStates = {}
 let zoom = 0.5, offsetX = 20, offsetY = 20, isDragging = false, startX = 0, startY = 0, initialPinchDist = 0;
 let isAdminMode = new URLSearchParams(window.location.search).get('mode') === 'admin';
 
-// Track the global state image matrix inside memory directly
 let globalActiveMapImage = null;
 
 // DOM Element Cache
@@ -51,11 +50,9 @@ const canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d'),
 const levelMenu = document.getElementById('levelMenu'), checklistGrid = document.getElementById('pieceChecklist');
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Immediate Verification Check: Is HTML element layout missing?
     if (!canvas || !ctx) {
-        alert("CRITICAL SYSTEM ERROR: The HTML Canvas element could not be found in the DOM! Check your index.html layout.");
+        alert("CRITICAL SYSTEM ERROR: Canvas missing.");
     }
-
     document.querySelectorAll('.admin-ui').forEach(el => el.style.display = isAdminMode ? 'flex' : 'none');
     
     const dbRequest = indexedDB.open("SPA_Community_Tracker_DB", 2);
@@ -86,7 +83,6 @@ async function loadStageData(stageName) {
     currentStage = stageName;
     document.querySelectorAll('.level-btn').forEach(b => b.classList.toggle('active', b.innerText === stageName));
 
-    // Fallback safeguard for data structure initialization
     try {
         const res = await fetch(`${BASE_PATH}assets/puzzlepieces_data.json`);
         if (!res.ok) throw new Error(`Status ${res.status}`);
@@ -98,7 +94,6 @@ async function loadStageData(stageName) {
     }
     stageMarkers.sort((a, b) => a.x - b.x);
 
-    // Sync IndexedDB user progress saves
     collectedStates = await new Promise(r => {
         if (!db) return r({});
         const req = db.transaction("user_progress", "readonly").objectStore("user_progress").get(stageName);
@@ -107,10 +102,15 @@ async function loadStageData(stageName) {
     });
 
     const fileName = MAP_FILES[stageName];
-    const targetSrcURL = `${BASE_PATH}maps/${fileName}`;
     
-    // NUCLEAR OPTION IMPLEMENTATION: Build an entirely local, explicit worker image instantiation instance
+    // CRITICAL FIX: Add a unique timestamp parameter onto the URL string to destroy browser memory cache traps
+    const targetSrcURL = `${BASE_PATH}maps/${fileName}?t=${new Date().getTime()}`;
+    
     const imgWorker = new Image();
+    
+    // SECURITY FIX: Force crossOrigin to anonymous BEFORE setting the source path.
+    // This explicitly tells the browser to bypass local canvas security restrictions.
+    imgWorker.crossOrigin = "anonymous";
     
     imgWorker.onload = () => {
         globalActiveMapImage = imgWorker;
@@ -127,9 +127,8 @@ async function loadStageData(stageName) {
     };
     
     imgWorker.onerror = (err) => {
-        // Absolute undeniable fallback feedback mechanism
         console.error("Image loading block trapped a critical error event trace:", err);
-        alert(`HEY! The map image failed to load because you suck! Tried looking for:\n${targetSrcURL}`);
+        alert(`Failed to execute asset canvas mapping:\n${targetSrcURL}`);
         
         canvas.width = 600; canvas.height = 340;
         canvas.style.width = "100%"; canvas.style.height = "auto";
@@ -141,7 +140,6 @@ async function loadStageData(stageName) {
         buildChecklistUI();
     };
 
-    // Attach source path execution command AFTER setting event behaviors to avoid instant race failures
     imgWorker.src = targetSrcURL;
 }
 
@@ -326,4 +324,5 @@ function exportMasterJSON() {
     const out = {}; out[currentStage] = stageMarkers.map(m => ({ x: Math.round(m.x), y: Math.round(m.y) }));
     const blob = new Blob([JSON.stringify(out, null, 4)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'puzzlepieces_data.json'; a.click();
-       }
+                         }
+                                 
