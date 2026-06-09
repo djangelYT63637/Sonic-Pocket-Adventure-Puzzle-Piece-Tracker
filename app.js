@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SONIC POCKET ADVENTURE: PIECE TRACKER - DEFINITIVE ENGINE (v18.0)
+   SONIC POCKET ADVENTURE: PIECE TRACKER - DEFINITIVE ENGINE (v19.0)
    ========================================================================== */
 
 const STAGES = [
@@ -45,7 +45,6 @@ let globalActiveMapImage = null;
 let canvas, ctx, viewport, levelMenu, checklistGrid;
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Cache UI Target Elements safely upon completion of DOM load cycle
     canvas = document.getElementById('canvas');
     if (canvas) ctx = canvas.getContext('2d');
     viewport = document.getElementById('viewport');
@@ -109,22 +108,32 @@ async function loadStageData(stageName) {
     imgWorker.onload = () => {
         globalActiveMapImage = imgWorker;
         
+        // CRITICAL DIMENSION FAILSURGICAL PROTECTION ENGINE
+        // If the browser reports 0, extract the natural metadata dimensions. If those fail, use absolute defaults.
+        let targetWidth = imgWorker.width || imgWorker.naturalWidth || 2048;
+        let targetHeight = imgWorker.height || imgWorker.naturalHeight || 512;
+        
+        console.log(`Asset Engine Initialized: Resolved Size Dimension Metrics -> ${targetWidth}x${targetHeight}`);
+        
         if (canvas) {
-            canvas.width = imgWorker.width;
-            canvas.height = imgWorker.height;
-            canvas.style.width = imgWorker.width + "px";
-            canvas.style.height = imgWorker.height + "px";
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
+            canvas.style.width = targetWidth + "px";
+            canvas.style.height = targetHeight + "px";
         }
         
+        // Dynamic centering view calculations based on true canvas dimensions
         zoom = window.innerHeight > window.innerWidth ? 0.35 : 0.6;
-        offsetX = 30; offsetY = 30;
+        offsetX = 20; 
+        offsetY = 20;
+        
         applyTransform();
         renderMap();
     };
     
     imgWorker.onerror = (err) => {
         console.error("Image loader error caught: ", err);
-        if (ctx) {
+        if (ctx && canvas) {
             canvas.width = 600; canvas.height = 340;
             canvas.style.width = "100%"; canvas.style.height = "auto";
             ctx.fillStyle = "#000c22"; ctx.fillRect(0, 0, 600, 340);
@@ -140,9 +149,15 @@ async function loadStageData(stageName) {
 }
 
 function renderMap() {
-    if (!globalActiveMapImage || !globalActiveMapImage.complete || globalActiveMapImage.width === 0 || !ctx) return;
+    if (!globalActiveMapImage || !ctx || !canvas) return;
+    
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(globalActiveMapImage, 0, 0);
+    
+    // Explicitly draw using safe fallback boundaries to bypass zero-dimension crashes
+    let dW = globalActiveMapImage.width || globalActiveMapImage.naturalWidth || canvas.width;
+    let dH = globalActiveMapImage.height || globalActiveMapImage.naturalHeight || canvas.height;
+    
+    ctx.drawImage(globalActiveMapImage, 0, 0, dW, dH);
 
     stageMarkers.forEach((m, idx) => {
         const checked = !!collectedStates[idx];
@@ -230,7 +245,7 @@ function setupGestureListeners() {
             zoomCalc(Math.min(Math.max(d / initialPinchDist, 0.9), 1.1), (e.touches[0].clientX + e.touches[1].clientX)/2, (e.touches[0].clientY + e.touches[1].clientY)/2);
             initialPinchDist = d;
         }
-    }, {passive:false});
+    }, {false:false});
 
     if (canvas) {
         canvas.onclick = (e) => {
@@ -326,5 +341,5 @@ function exportMasterJSON() {
     const out = {}; out[currentStage] = stageMarkers.map(m => ({ x: Math.round(m.x), y: Math.round(m.y) }));
     const blob = new Blob([JSON.stringify(out, null, 4)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'puzzlepieces_data.json'; a.click();
-}
-   
+                                       }
+       
