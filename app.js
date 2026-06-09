@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SONIC POCKET ADVENTURE: PIECE TRACKER - DEFINITIVE ENGINE (v14.0)
+   SONIC POCKET ADVENTURE: PIECE TRACKER - DEFINITIVE ENGINE (v15.0)
    ========================================================================== */
 
 // --- Configuration Constants ---
@@ -26,16 +26,15 @@ const MAP_FILES = {
     "Last Utopia":            "last-utopia.png"
 };
 
-// --- Corrected Path Resolution Engine ---
+// --- Path Resolution Engine ---
 const getBasePath = () => {
     const loc = window.location;
     if (loc.hostname.includes("github.io")) {
-        // Filter out empty strings caused by the leading slash to get the true repository name safely
         const pathSegments = loc.pathname.split('/').filter(segment => segment.length > 0);
         const repoName = pathSegments[0]; 
         return `${loc.origin}/${repoName}/`;
     }
-    return "./"; // Fallback mapping for local testing environments
+    return "./"; 
 };
 const BASE_PATH = getBasePath();
 
@@ -80,12 +79,16 @@ async function loadStageData(stageName) {
     currentStage = stageName;
     document.querySelectorAll('.level-btn').forEach(b => b.classList.toggle('active', b.innerText === stageName));
 
-    // Pull JSON coordinate mappings safely using corrected absolute path strings
+    // CRITICAL FIX: Safe Fetch with Active Fallback Integration
     try {
         const res = await fetch(`${BASE_PATH}assets/puzzlepieces_data.json`);
+        if (!res.ok) throw new Error(`HTTP 404 - File Not Present Yet`);
         const data = await res.json();
         stageMarkers = data[stageName] || [];
-    } catch (e) { stageMarkers = []; }
+    } catch (e) { 
+        // Fallback: If the JSON doesn't exist yet, seamlessly load an empty marker list and proceed!
+        stageMarkers = []; 
+    }
     stageMarkers.sort((a, b) => a.x - b.x);
 
     // Sync IndexedDB user progress saves
@@ -96,7 +99,7 @@ async function loadStageData(stageName) {
         req.onerror = () => r({});
     });
 
-    // Fire the map loader using the absolute resolved repository folder coordinates
+    // Execute Image Map pipeline execution
     const fileName = MAP_FILES[stageName];
     activeMapImage.src = `${BASE_PATH}maps/${fileName}`;
     
@@ -112,11 +115,14 @@ async function loadStageData(stageName) {
         renderMap();
     };
     activeMapImage.onerror = () => {
-        canvas.width = 600; canvas.height = 300;
-        canvas.style.width = "600px"; canvas.style.height = "300px";
-        ctx.fillStyle = "#000c22"; ctx.fillRect(0, 0, 600, 300);
-        ctx.fillStyle = "#fff"; ctx.font = "8px 'Press Start 2P'";
-        ctx.fillText(`MISSING LINK: ${BASE_PATH}maps/${fileName}`, 20, 150);
+        canvas.width = 600; canvas.height = 340;
+        canvas.style.width = "100%"; canvas.style.height = "auto";
+        ctx.fillStyle = "#000c22"; ctx.fillRect(0, 0, 600, 340);
+        ctx.fillStyle = "#ff3333"; ctx.font = "10px 'Press Start 2P'";
+        ctx.fillText("MAP LOADING FAILURE!", 20, 50);
+        ctx.fillStyle = "#ffffff"; ctx.fillText("THE BROWSER TRIED TO LOOK HERE:", 20, 90);
+        ctx.fillStyle = "#ffe700"; ctx.fillText(activeMapImage.src, 20, 130); 
+        ctx.fillStyle = "#ffffff"; ctx.fillText("CHECK CAPS / SPELLING / REPO FOLDER", 20, 200);
         buildChecklistUI();
     };
 }
@@ -187,7 +193,6 @@ function togglePiece(idx) {
 /* --- Input Event Listeners & Transforms --- */
 function applyTransform() { canvas.style.transform = `translate3d(${offsetX}px,${offsetY}px,0) scale(${zoom})`; }
 
-// Gesture handlers
 function setupGestureListeners() {
     viewport.onmousedown = (e) => { isDragging = true; startX = e.clientX - offsetX; startY = e.clientY - offsetY; };
     window.onmouseup = () => isDragging = false;
@@ -300,5 +305,5 @@ function exportMasterJSON() {
     const out = {}; out[currentStage] = stageMarkers.map(m => ({ x: Math.round(m.x), y: Math.round(m.y) }));
     const blob = new Blob([JSON.stringify(out, null, 4)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'puzzlepieces_data.json'; a.click();
-                           }
-                   
+                              }
+        
