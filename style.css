@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SONIC POCKET ADVENTURE: PIECE TRACKER - DEFINITIVE STYLE SHEET
+   SONIC POCKET ADVENTURE: PIECE TRACKER - UNIVERSAL CONFORMITY STYLES
    ========================================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
@@ -16,7 +16,6 @@
     --shadow-dark: #000000;
 }
 
-/* --- Base Reset & Scanlines --- */
 * {
     box-sizing: border-box;
     -webkit-tap-highlight-color: transparent;
@@ -32,9 +31,7 @@ body {
     display: flex;
     flex-direction: column;
     height: 100vh;
-    height: -webkit-fill-available; /* Fixes mobile viewport jumping */
-    
-    /* Retro CRT Scanline Emulation Effect */
+    height: -webkit-fill-available;
     background-image: 
         linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
         linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
@@ -42,34 +39,34 @@ body {
     overflow: hidden;
 }
 
-/* --- Sonic Header --- */
 header {
     background: var(--sonic-blue);
-    padding: 12px;
+    padding: 8px 12px;
     text-align: center;
     border-bottom: 4px solid var(--sonic-yellow);
     box-shadow: 0 4px 0 var(--sonic-red);
     z-index: 100;
     flex-shrink: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
-header h1 {
-    font-size: 12px;
-    margin: 0;
-    text-shadow: 2px 2px var(--shadow-dark);
-    letter-spacing: 1px;
+.header-logo {
+    max-height: 28px;
+    width: auto;
+    object-fit: contain;
+    filter: drop-shadow(2px 2px 0px var(--shadow-dark));
 }
 
-/* --- Main Vertical Stack Layout --- */
 .main-layout {
     display: flex;
     flex-direction: column;
     flex: 1;
-    height: calc(100vh - 44px); /* CRITICAL FIXED LAYOUT DIMENSION MATRIX: Prevents container collapse */
+    height: calc(100vh - 48px);
     overflow: hidden;
 }
 
-/* --- Top Dashboard Section --- */
 .dashboard {
     background: var(--panel-bg);
     border-bottom: 4px solid var(--border-light);
@@ -77,12 +74,11 @@ header h1 {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    max-height: 40vh; /* Limits panel height to give map premium space */
+    max-height: 42vh;
     overflow-y: auto;
     flex-shrink: 0;
 }
 
-/* --- Stats & Progress Tracking --- */
 .stats-row {
     display: flex;
     gap: 15px;
@@ -100,6 +96,7 @@ header h1 {
     text-shadow: 1px 1px var(--shadow-dark);
     display: flex;
     justify-content: space-between;
+    line-height: 1.4;
 }
 
 .progress-bar {
@@ -108,34 +105,21 @@ header h1 {
     background: var(--shadow-dark);
     border: 2px solid var(--border-light);
     margin-top: 4px;
-    box-shadow: 2px 2px 0px rgba(0,0,0,0.5);
 }
 
-.fill-stage {
-    height: 100%;
-    background: var(--emerald-green);
-    width: 0%;
-    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
+.fill-stage { height: 100%; background: var(--emerald-green); width: 0%; transition: width 0.3s ease; }
+.fill-total { height: 100%; background: var(--progress-blue); width: 0%; transition: width 0.3s ease; }
 
-.fill-total {
-    height: 100%;
-    background: var(--progress-blue);
-    width: 0%;
-    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* --- Responsive Zone Selector Grid --- */
 .level-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 5px;
-    margin: 6px 0;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 6px;
+    margin: 4px 0;
 }
 
 .level-btn {
     padding: 8px;
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.06);
     border: 2px solid var(--sonic-blue);
     color: var(--border-light);
     font-family: 'Press Start 2P', cursive;
@@ -145,81 +129,49 @@ header h1 {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    transition: all 0.15s ease;
-}
-
-.level-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    border-color: var(--border-light);
 }
 
 .level-btn.active {
     background: var(--sonic-blue);
     border-color: var(--sonic-yellow);
-    box-shadow: inset 0 0 8px rgba(255, 255, 255, 0.6);
-    text-shadow: 1px 1px var(--shadow-dark);
+    box-shadow: inset 0 0 6px rgba(255, 255, 255, 0.5);
 }
 
-/* --- Interactive Checklist Block --- */
 .checklist-container {
-    border-top: 2px dashed rgba(255, 255, 255, 0.2);
-    padding-top: 10px;
+    border-top: 2px dashed rgba(255, 255, 255, 0.15);
+    padding-top: 8px;
 }
 
-.checklist-title {
-    color: var(--sonic-yellow);
-    font-size: 7px;
-    margin-bottom: 6px;
-    text-shadow: 1px 1px var(--shadow-dark);
-}
-
-.checklist-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-}
+.checklist-title { color: var(--sonic-yellow); font-size: 7px; margin-bottom: 6px; }
+.checklist-grid { display: flex; flex-wrap: wrap; gap: 4px; }
 
 .check-item {
     font-size: 6px;
-    padding: 6px;
-    border: 1px solid #444;
+    padding: 6px 4px;
+    border: 1px solid #333;
     cursor: pointer;
     background: var(--shadow-dark);
-    min-width: 42px;
+    min-width: 38px;
     text-align: center;
     user-select: none;
-    transition: background 0.1s;
-}
-
-.check-item:hover {
-    border-color: var(--border-light);
 }
 
 .check-item.collected {
     color: var(--text-dim);
-    background: #0b0b1a;
+    background: #060614;
     border-color: var(--emerald-green);
-    opacity: 0.6;
+    opacity: 0.5;
 }
 
-/* Active feedback when clicking/teleporting */
-.check-item:active {
-    background: var(--sonic-yellow);
-    color: var(--shadow-dark);
-}
-
-/* --- Map Viewport Workspace --- */
 .container {
     flex: 1;
     display: flex;
     flex-direction: column;
-    background: #11111d;
+    background: #0a0a12;
     position: relative;
     overflow: hidden;
-    min-height: 200px; /* CRITICAL BLOCK SAFETY LIMIT PROTECTION */
 }
 
-/* --- Navigation & File Toolbar --- */
 .toolbar {
     display: flex;
     flex-wrap: wrap;
@@ -231,33 +183,15 @@ header h1 {
 }
 
 button {
-    padding: 6px 12px;
+    padding: 6px 10px;
     background: var(--emerald-green);
     border: 2px solid var(--border-light);
     color: var(--shadow-dark);
     font-family: 'Press Start 2P', cursive;
-    font-weight: bold;
-    cursor: pointer;
     font-size: 7px;
-    box-shadow: 2px 2px 0px rgba(0,0,0,0.5);
+    cursor: pointer;
 }
 
-button:active {
-    transform: translate(1px, 1px);
-    box-shadow: 1px 1px 0px rgba(0,0,0,0.5);
-}
-
-button.export-btn {
-    background: var(--sonic-yellow);
-    color: var(--shadow-dark);
-}
-
-button.reset-btn {
-    background: var(--sonic-red);
-    color: var(--border-light);
-}
-
-/* --- Infinite Panning Canvas Container --- */
 .viewport {
     flex: 1;
     width: 100%;
@@ -265,32 +199,30 @@ button.reset-btn {
     position: relative;
     overflow: hidden;
     cursor: grab;
-    touch-action: none; /* Required to intercept native phone zoom for our custom engine */
+    touch-action: none;
 }
 
-.viewport:active {
-    cursor: grabbing;
-}
+.viewport:active { cursor: grabbing; }
 
 canvas {
     position: absolute;
     top: 0;
     left: 0;
-    display: block; /* CRITICAL FIX: Ensures elements obey block model dimensions */
+    display: block;
     image-rendering: pixelated;
-    image-rendering: crisp-edges; /* Modern fallback */
+    image-rendering: crisp-edges;
     transform-origin: 0 0;
-    will-change: transform; /* Boosts smartphone hardware translation performance */
+    will-change: transform;
 }
 
-/* --- Custom Layout Adjustments for True Landscape --- */
-@media (min-orientation: landscape) and (min-width: 768px) {
+/* --- PREMIUM LAPTOP/DESKTOP ADVANCED SCREEN LAYOUT --- */
+@media (min-width: 900px) {
     .main-layout {
         flex-direction: row;
-        height: calc(100vh - 44px);
+        height: calc(100vh - 50px);
     }
     .dashboard {
-        width: 320px;
+        width: 360px; /* Enhanced view room allocation space */
         max-height: 100%;
         border-bottom: none;
         border-right: 4px solid var(--border-light);
@@ -298,17 +230,12 @@ canvas {
     .level-grid {
         grid-template-columns: 1fr 1fr;
     }
+    .check-item {
+        min-width: 46px;
+        padding: 8px 6px;
+    }
 }
 
-/* Custom Scrollbar Styling for Retro Vibe */
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-::-webkit-scrollbar-track {
-    background: var(--shadow-dark);
-}
-::-webkit-scrollbar-thumb {
-    background: var(--sonic-yellow);
-    border: 1px solid var(--border-light);
-}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--shadow-dark); }
+::-webkit-scrollbar-thumb { background: var(--sonic-yellow); }
