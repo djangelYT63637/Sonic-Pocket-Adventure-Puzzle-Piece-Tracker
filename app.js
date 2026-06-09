@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SONIC POCKET ADVENTURE: PIECE TRACKER - OPTIMIZED CORE (v10.0)
+   SONIC POCKET ADVENTURE: PIECE TRACKER - OPTIMIZED CORE (v11.0)
    ========================================================================== */
 
 const STAGES = [
@@ -49,9 +49,9 @@ async function loadStageData(stageName) {
     currentStage = stageName;
     document.querySelectorAll('.level-btn').forEach(b => b.classList.toggle('active', b.innerText === stageName));
 
-    // Resolve structural case matching paths for GitHub Pages environments
+    // Look inside the newly renamed lowercase "assets" directory
     try {
-        const res = await fetch('./Assets/PuzzlePieces_Data.json');
+        const res = await fetch('./assets/puzzlepieces_data.json');
         const data = await res.json();
         stageMarkers = data[stageName] || [];
     } catch (e) { stageMarkers = []; }
@@ -65,11 +65,16 @@ async function loadStageData(stageName) {
         req.onerror = () => r({});
     });
 
-    // Fire lower-case absolute relative path mapping sequence
-    activeMapImage.src = `./Maps/${stageName.toLowerCase().replace(/ /g, '-')}.png`;
+    // Point directly to the new lowercase "maps" directory layout
+    activeMapImage.src = `./maps/${stageName.toLowerCase().replace(/ /g, '-')}.png`;
+    
     activeMapImage.onload = () => {
+        // Explicitly size and scale the canvas sizing block before rendering the matrix
         canvas.width = activeMapImage.width;
         canvas.height = activeMapImage.height;
+        canvas.style.width = activeMapImage.width + "px";
+        canvas.style.height = activeMapImage.height + "px";
+        
         zoom = window.innerHeight > window.innerWidth ? 0.35 : 0.6;
         offsetX = 30; offsetY = 30;
         applyTransform();
@@ -77,9 +82,10 @@ async function loadStageData(stageName) {
     };
     activeMapImage.onerror = () => {
         canvas.width = 600; canvas.height = 300;
+        canvas.style.width = "600px"; canvas.style.height = "300px";
         ctx.fillStyle = "#000c22"; ctx.fillRect(0, 0, 600, 300);
         ctx.fillStyle = "#fff"; ctx.font = "8px 'Press Start 2P'";
-        ctx.fillText("IMAGE TARGET NOT ACQUIRED IN /Maps/", 40, 150);
+        ctx.fillText("IMAGE TARGET NOT ACQUIRED IN /maps/", 40, 150);
         buildChecklistUI();
     };
 }
@@ -122,7 +128,7 @@ function buildChecklistUI() {
         };
         item.ondblclick = () => togglePiece(idx);
         
-        let t; // Mobile long-press simulation interface
+        let t; // Mobile long-press simulation proxy interface
         item.addEventListener('touchstart', () => { t = setTimeout(() => togglePiece(idx), 500); }, {passive:true});
         item.addEventListener('touchend', () => clearTimeout(t));
         checklistGrid.appendChild(item);
@@ -152,6 +158,7 @@ function togglePiece(idx) {
 /* --- Input Event Listeners & Transforms --- */
 function applyTransform() { canvas.style.transform = `translate3d(${offsetX}px,${offsetY}px,0) scale(${zoom})`; }
 
+// Adjust standard pixel scaling factors across pointer arrays
 function setupGestureListeners() {
     viewport.onmousedown = (e) => { isDragging = true; startX = e.clientX - offsetX; startY = e.clientY - offsetY; };
     window.onmouseup = () => isDragging = false;
@@ -263,5 +270,6 @@ async function runMobileScanner() {
 function exportMasterJSON() {
     const out = {}; out[currentStage] = stageMarkers.map(m => ({ x: Math.round(m.x), y: Math.round(m.y) }));
     const blob = new Blob([JSON.stringify(out, null, 4)], { type: 'application/json' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'PuzzlePieces_Data.json'; a.click();
-    }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'puzzlepieces_data.json'; a.click();
+                                                }
+                       
