@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Sonic Pocket Adventure: Puzzle Piece Tracker</title>
-    
     <link rel="stylesheet" href="./style.css">
 </head>
 <body>
@@ -38,24 +37,32 @@
                 </div>
             </div>
 
-            <div class="level-grid" id="levelMenu">
-                </div>
+            <div class="level-grid" id="levelMenu"></div>
 
             <div class="checklist-container">
-                <div class="checklist-title">CHECKLIST (TAP TO LOCATE | DBL-TAP TO CHECK):</div>
-                <div id="pieceChecklist" class="checklist-grid">
-                    </div>
+                <div class="checklist-title">CHECKLIST (TAP TO LOCATE | DBL-TAP OR LONG-TAP TO CHECK):</div>
+                <div id="pieceChecklist" class="checklist-grid"></div>
             </div>
         </div>
 
         <div class="container">
             <div class="toolbar">
                 <button onclick="zoomToPiece(-1)">RESET VIEW</button>
-                <button onclick="exportMasterJSON()" class="export-btn">EXPORT JSON</button>
                 
-                <span style="font-size: 7px; color: var(--sonic-yellow); margin-left: auto; align-self: center; padding-right: 5px;">
-                    DEV MODE: CLICK MAP TO DEFINE PIECES
-                </span>
+                <div class="admin-ui" style="display: none; gap: 4px; align-items: center; width: 100%;">
+                    <button onclick="triggerAdminInput('adminTemplateFileInput')" style="background: var(--sonic-blue); color: #fff;">
+                        LOAD TEMPLATE (.PNG)
+                    </button>
+                    <button onclick="executionTemplateAutomatedScan()" style="background: var(--sonic-yellow); color: #000;">
+                        RUN SCANNER (100%)
+                    </button>
+                    <button onclick="exportSystemMasterJSON()" class="export-btn">
+                        EXPORT MASTER JSON
+                    </button>
+                    <span style="font-size: 7px; color: var(--sonic-red); margin-left: auto; font-weight: bold; padding-right: 5px;">
+                        ADMIN MODE [CLICK SPACE TO ADD | SHIFT+CLICK MARKER TO ERASE]
+                    </span>
+                </div>
             </div>
 
             <div class="viewport" id="viewport">
@@ -64,56 +71,9 @@
         </div>
     </div>
 
+    <input type="file" id="adminTemplateFileInput" hidden accept="image/*">
     <audio id="bgm" loop></audio>
 
     <script src="./app.js"></script>
-    
-    <script>
-        // Temporary developer function to quickly log placement markers on click
-        async function exportMasterJSON() {
-            if (typeof stageMarkers === 'undefined') return alert("Engine mapping uninitialized.");
-            
-            // Temporary check to compile all stored items from your active session memory
-            const compiledOutput = {};
-            for (const stage of STAGES) {
-                if (stage === currentStage) {
-                    compiledOutput[stage] = stageMarkers.map(m => ({ x: Math.round(m.x), y: Math.round(m.y) }));
-                } else {
-                    // Pull whatever coordinates are already cached in local storage parameters
-                    const saved = await fetchStageMarkersFromJSON(stage);
-                    compiledOutput[stage] = saved.map(m => ({ x: Math.round(m.x), y: Math.round(m.y) }));
-                }
-            }
-            
-            const dataBlob = new Blob([JSON.stringify(compiledOutput, null, 4)], { type: 'application/json' });
-            const temporaryLink = document.createElement('a');
-            temporaryLink.href = URL.createObjectURL(dataBlob);
-            temporaryLink.download = 'PuzzlePieces_Data.json';
-            temporaryLink.click();
-        }
-
-        // Intercept standard click rules to append marker blocks if user taps a blank spot
-        document.addEventListener('DOMContentLoaded', () => {
-            const mapCanvas = document.getElementById('canvas');
-            mapCanvas.addEventListener('click', (e) => {
-                // Ensure we only register a coordinate add if we didn't hit an existing box element
-                const bounds = mapCanvas.getBoundingClientRect();
-                const clickX = (e.clientX - bounds.left) / zoom;
-                const clickY = (e.clientY - bounds.top) / zoom;
-
-                const clickedExisting = stageMarkers.some(marker => {
-                    return clickX >= marker.x && clickX <= (marker.x + 15) &&
-                           clickY >= marker.y && clickY <= (marker.y + 22);
-                });
-
-                if (!clickedExisting) {
-                    // Standard template offset bounding adjustments to align coordinate crosshairs perfectly
-                    stageMarkers.push({ x: Math.round(clickX - 7.5), y: Math.round(clickY - 11), collected: false });
-                    stageMarkers.sort((a, b) => a.x - b.x); // Auto sort left to right instantly
-                    renderMapMatrix();
-                }
-            });
-        });
-    </script>
 </body>
 </html>
