@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SONIC POCKET ADVENTURE: PIECE TRACKER - DEFINITIVE ENGINE (v19.0)
+   SONIC POCKET ADVENTURE: PIECE TRACKER - DEFINITIVE ENGINE (v20.0)
    ========================================================================== */
 
 const STAGES = [
@@ -100,6 +100,7 @@ async function loadStageData(stageName) {
     });
 
     const fileName = MAP_FILES[stageName];
+    // FIX: Ensure clean subdirectory lookup parsing 
     const targetSrcURL = `${BASE_PATH}maps/${fileName}?t=${new Date().getTime()}`;
     
     const imgWorker = new Image();
@@ -108,12 +109,10 @@ async function loadStageData(stageName) {
     imgWorker.onload = () => {
         globalActiveMapImage = imgWorker;
         
-        // CRITICAL DIMENSION FAILSURGICAL PROTECTION ENGINE
-        // If the browser reports 0, extract the natural metadata dimensions. If those fail, use absolute defaults.
         let targetWidth = imgWorker.width || imgWorker.naturalWidth || 2048;
         let targetHeight = imgWorker.height || imgWorker.naturalHeight || 512;
         
-        console.log(`Asset Engine Initialized: Resolved Size Dimension Metrics -> ${targetWidth}x${targetHeight}`);
+        console.log(`Asset Engine Initialized: Size Dimension Metrics -> ${targetWidth}x${targetHeight}`);
         
         if (canvas) {
             canvas.width = targetWidth;
@@ -122,7 +121,6 @@ async function loadStageData(stageName) {
             canvas.style.height = targetHeight + "px";
         }
         
-        // Dynamic centering view calculations based on true canvas dimensions
         zoom = window.innerHeight > window.innerWidth ? 0.35 : 0.6;
         offsetX = 20; 
         offsetY = 20;
@@ -153,7 +151,6 @@ function renderMap() {
     
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Explicitly draw using safe fallback boundaries to bypass zero-dimension crashes
     let dW = globalActiveMapImage.width || globalActiveMapImage.naturalWidth || canvas.width;
     let dH = globalActiveMapImage.height || globalActiveMapImage.naturalHeight || canvas.height;
     
@@ -237,6 +234,7 @@ function setupGestureListeners() {
         else if (e.touches.length === 2) { isDragging = false; initialPinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); }
     }, {passive:true});
 
+    // FIX: Changed {false:false} to valid configuration syntax behavior {passive:false}
     viewport.addEventListener('touchmove', (e) => {
         if (e.touches.length === 1 && isDragging) { offsetX = e.touches[0].clientX - startX; offsetY = e.touches[0].clientY - startY; applyTransform(); }
         else if (e.touches.length === 2) {
@@ -245,7 +243,7 @@ function setupGestureListeners() {
             zoomCalc(Math.min(Math.max(d / initialPinchDist, 0.9), 1.1), (e.touches[0].clientX + e.touches[1].clientX)/2, (e.touches[0].clientY + e.touches[1].clientY)/2);
             initialPinchDist = d;
         }
-    }, {false:false});
+    }, {passive:false});
 
     if (canvas) {
         canvas.onclick = (e) => {
@@ -341,5 +339,4 @@ function exportMasterJSON() {
     const out = {}; out[currentStage] = stageMarkers.map(m => ({ x: Math.round(m.x), y: Math.round(m.y) }));
     const blob = new Blob([JSON.stringify(out, null, 4)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'puzzlepieces_data.json'; a.click();
-                                       }
-       
+}
