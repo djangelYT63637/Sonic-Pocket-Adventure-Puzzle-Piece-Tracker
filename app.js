@@ -1,14 +1,32 @@
 /* ==========================================================================
-   SONIC POCKET ADVENTURE: PIECE TRACKER - OPTIMIZED CORE (v11.0)
+   SONIC POCKET ADVENTURE: PIECE TRACKER - DEFINITIVE ENGINE (v12.0)
    ========================================================================== */
 
+// --- Configuration Constants ---
 const STAGES = [
     "Neo South Island Act 1", "Neo South Island Act 2", "Secret Plant Act 1", "Secret Plant Act 2",
     "Cosmic Casino Act 1", "Cosmic Casino Act 2", "Aquatic Relix Act 1", "Aquatic Relix Act 2",
     "Sky Chase", "Aerobase", "Gigantic Angel Act 1", "Gigantic Angel Act 2", "Last Utopia"
 ];
 
-// Engine State Management
+// Explicit Hardcoded File Matrix (Zero guesswork, matches your renamed files perfectly)
+const MAP_FILES = {
+    "Neo South Island Act 1": "neo-south-island-act-1.png",
+    "Neo South Island Act 2": "neo-south-island-act-2.png",
+    "Secret Plant Act 1":     "secret-plant-act-1.png",
+    "Secret Plant Act 2":     "secret-plant-act-2.png",
+    "Cosmic Casino Act 1":    "cosmic-casino-act-1.png",
+    "Cosmic Casino Act 2":    "cosmic-casino-act-2.png",
+    "Aquatic Relix Act 1":    "aquatic-relix-act-1.png",
+    "Aquatic Relix Act 2":    "aquatic-relix-act-2.png",
+    "Sky Chase":              "sky-chase.png",
+    "Aerobase":               "aerobase.png",
+    "Gigantic Angel Act 1":   "gigantic-angel-act-1.png",
+    "Gigantic Angel Act 2":   "gigantic-angel-act-2.png",
+    "Last Utopia":            "last-utopia.png"
+};
+
+// --- Engine State Management ---
 let db = null, currentStage = STAGES[0], stageMarkers = [], collectedStates = {};
 let zoom = 0.5, offsetX = 20, offsetY = 20, isDragging = false, startX = 0, startY = 0, initialPinchDist = 0;
 let isAdminMode = new URLSearchParams(window.location.search).get('mode') === 'admin';
@@ -49,7 +67,7 @@ async function loadStageData(stageName) {
     currentStage = stageName;
     document.querySelectorAll('.level-btn').forEach(b => b.classList.toggle('active', b.innerText === stageName));
 
-    // Look inside the newly renamed lowercase "assets" directory
+    // Fetch coordinate data from your master JSON asset
     try {
         const res = await fetch('./assets/puzzlepieces_data.json');
         const data = await res.json();
@@ -57,7 +75,7 @@ async function loadStageData(stageName) {
     } catch (e) { stageMarkers = []; }
     stageMarkers.sort((a, b) => a.x - b.x);
 
-    // Sync IndexedDB user checkboxes
+    // Sync IndexedDB personal user progress checkboxes
     collectedStates = await new Promise(r => {
         if (!db) return r({});
         const req = db.transaction("user_progress", "readonly").objectStore("user_progress").get(stageName);
@@ -65,11 +83,12 @@ async function loadStageData(stageName) {
         req.onerror = () => r({});
     });
 
-    // Point directly to the new lowercase "maps" directory layout
-    activeMapImage.src = `./maps/${stageName.toLowerCase().replace(/ /g, '-')}.png`;
+    // Pull the exact hardcoded filename directly from the dictionary matrix
+    const fileName = MAP_FILES[stageName];
+    activeMapImage.src = `./maps/${fileName}`;
     
     activeMapImage.onload = () => {
-        // Explicitly size and scale the canvas sizing block before rendering the matrix
+        // Explicitly set dimensions before triggering render to lock canvas aspect limits
         canvas.width = activeMapImage.width;
         canvas.height = activeMapImage.height;
         canvas.style.width = activeMapImage.width + "px";
@@ -85,7 +104,7 @@ async function loadStageData(stageName) {
         canvas.style.width = "600px"; canvas.style.height = "300px";
         ctx.fillStyle = "#000c22"; ctx.fillRect(0, 0, 600, 300);
         ctx.fillStyle = "#fff"; ctx.font = "8px 'Press Start 2P'";
-        ctx.fillText("IMAGE TARGET NOT ACQUIRED IN /maps/", 40, 150);
+        ctx.fillText(`FAILED TO LOAD: /maps/${fileName}`, 40, 150);
         buildChecklistUI();
     };
 }
@@ -128,23 +147,22 @@ function buildChecklistUI() {
         };
         item.ondblclick = () => togglePiece(idx);
         
-        let t; // Mobile long-press simulation proxy interface
+        let t; // Touch long-press simulation for mobile
         item.addEventListener('touchstart', () => { t = setTimeout(() => togglePiece(idx), 500); }, {passive:true});
         item.addEventListener('touchend', () => clearTimeout(t));
         checklistGrid.appendChild(item);
     });
     
-    // Perform statistical analytics updates
+    // UI Progress Metrics Reporting
     const currentCollected = stageMarkers.filter((_, i) => collectedStates[i]).length;
     const stagePerc = stageMarkers.length ? Math.round((currentCollected / stageMarkers.length) * 100) : 0;
     document.getElementById('stagePerc').innerText = `${stagePerc}%`;
     document.getElementById('stageFill').style.width = `${stagePerc}%`;
     
-    // Global tracking computation logic running inline
     let total = 0, done = 0;
     STAGES.forEach(async s => {
         if(s === currentStage) { total += stageMarkers.length; done += currentCollected; }
-        document.getElementById('totalStats').innerText = `${done}/${total} (Unified)`;
+        document.getElementById('totalStats').innerText = `${done}/${total}`;
     });
 }
 
@@ -158,7 +176,6 @@ function togglePiece(idx) {
 /* --- Input Event Listeners & Transforms --- */
 function applyTransform() { canvas.style.transform = `translate3d(${offsetX}px,${offsetY}px,0) scale(${zoom})`; }
 
-// Adjust standard pixel scaling factors across pointer arrays
 function setupGestureListeners() {
     viewport.onmousedown = (e) => { isDragging = true; startX = e.clientX - offsetX; startY = e.clientY - offsetY; };
     window.onmouseup = () => isDragging = false;
@@ -271,5 +288,5 @@ function exportMasterJSON() {
     const out = {}; out[currentStage] = stageMarkers.map(m => ({ x: Math.round(m.x), y: Math.round(m.y) }));
     const blob = new Blob([JSON.stringify(out, null, 4)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'puzzlepieces_data.json'; a.click();
-                                                }
-                       
+    }
+       
