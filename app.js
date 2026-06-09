@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SONIC POCKET ADVENTURE: PIECE TRACKER - DEFINITIVE ENGINE (v15.0)
+   SONIC POCKET ADVENTURE: PIECE TRACKER - DEFINITIVE ENGINE (v16.0)
    ========================================================================== */
 
 // --- Configuration Constants ---
@@ -42,13 +42,20 @@ const BASE_PATH = getBasePath();
 let db = null, currentStage = STAGES[0], stageMarkers = [], collectedStates = {};
 let zoom = 0.5, offsetX = 20, offsetY = 20, isDragging = false, startX = 0, startY = 0, initialPinchDist = 0;
 let isAdminMode = new URLSearchParams(window.location.search).get('mode') === 'admin';
-const activeMapImage = new Image();
+
+// Track the global state image matrix inside memory directly
+let globalActiveMapImage = null;
 
 // DOM Element Cache
 const canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d'), viewport = document.getElementById('viewport');
 const levelMenu = document.getElementById('levelMenu'), checklistGrid = document.getElementById('pieceChecklist');
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Immediate Verification Check: Is HTML element layout missing?
+    if (!canvas || !ctx) {
+        alert("CRITICAL SYSTEM ERROR: The HTML Canvas element could not be found in the DOM! Check your index.html layout.");
+    }
+
     document.querySelectorAll('.admin-ui').forEach(el => el.style.display = isAdminMode ? 'flex' : 'none');
     
     const dbRequest = indexedDB.open("SPA_Community_Tracker_DB", 2);
@@ -79,14 +86,13 @@ async function loadStageData(stageName) {
     currentStage = stageName;
     document.querySelectorAll('.level-btn').forEach(b => b.classList.toggle('active', b.innerText === stageName));
 
-    // CRITICAL FALLBACK SAFEGUARD: Wrapped entirely so a missing JSON doesn't stop the engine!
+    // Fallback safeguard for data structure initialization
     try {
         const res = await fetch(`${BASE_PATH}assets/puzzlepieces_data.json`);
-        if (!res.ok) throw new Error(`Status ${res.status}`); // Catch 404 cleanly
+        if (!res.ok) throw new Error(`Status ${res.status}`);
         const data = await res.json();
         stageMarkers = data[stageName] || [];
     } catch (e) { 
-        // Silently swallow the error, print a reminder in console, and let the images load!
         console.warn("JSON Database file not created/found yet. Starting with blank puzzle coordinates.");
         stageMarkers = []; 
     }
@@ -100,45 +106,50 @@ async function loadStageData(stageName) {
         req.onerror = () => r({});
     });
 
-    // Fire the map loader using the absolute resolved repository folder coordinates
     const fileName = MAP_FILES[stageName];
-    activeMapImage.src = `${BASE_PATH}maps/${fileName}`;
+    const targetSrcURL = `${BASE_PATH}maps/${fileName}`;
     
-    activeMapImage.onload = () => {
-        canvas.width = activeMapImage.width;
-        canvas.height = activeMapImage.height;
-        canvas.style.width = activeMapImage.width + "px";
-        canvas.style.height = activeMapImage.height + "px";
+    // NUCLEAR OPTION IMPLEMENTATION: Build an entirely local, explicit worker image instantiation instance
+    const imgWorker = new Image();
+    
+    imgWorker.onload = () => {
+        globalActiveMapImage = imgWorker;
+        
+        canvas.width = imgWorker.width;
+        canvas.height = imgWorker.height;
+        canvas.style.width = imgWorker.width + "px";
+        canvas.style.height = imgWorker.height + "px";
         
         zoom = window.innerHeight > window.innerWidth ? 0.35 : 0.6;
         offsetX = 30; offsetY = 30;
         applyTransform();
         renderMap();
     };
-    activeMapImage.onerror = () => {
+    
+    imgWorker.onerror = (err) => {
+        // Absolute undeniable fallback feedback mechanism
+        console.error("Image loading block trapped a critical error event trace:", err);
+        alert(`HEY! The map image failed to load because you suck! Tried looking for:\n${targetSrcURL}`);
+        
         canvas.width = 600; canvas.height = 340;
         canvas.style.width = "100%"; canvas.style.height = "auto";
         ctx.fillStyle = "#000c22"; ctx.fillRect(0, 0, 600, 340);
         ctx.fillStyle = "#ff3333"; ctx.font = "10px 'Press Start 2P'";
-        
-        ctx.fillText("CRITICAL LOADING FAILURE!", 20, 50);
+        ctx.fillText("CRITICAL IMAGE INITIALIZATION ERROR", 20, 50);
         ctx.fillStyle = "#ffffff";
-        ctx.fillText("THE BROWSER TRIED TO LOOK HERE:", 20, 90);
-        
-        ctx.fillStyle = "#ffe700";
-        ctx.fillText(activeMapImage.src, 20, 130); 
-        
-        ctx.fillStyle = "#ffffff";
-        ctx.fillText("CHECK CAPS / SPELLING / REPO DIRECTORY", 20, 200);
+        ctx.fillText(targetSrcURL, 20, 100);
         buildChecklistUI();
     };
+
+    // Attach source path execution command AFTER setting event behaviors to avoid instant race failures
+    imgWorker.src = targetSrcURL;
 }
 
 /* --- Graphics Render Engine --- */
 function renderMap() {
-    if (!activeMapImage.complete || activeMapImage.width === 0) return;
+    if (!globalActiveMapImage || !globalActiveMapImage.complete || globalActiveMapImage.width === 0) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(activeMapImage, 0, 0);
+    ctx.drawImage(globalActiveMapImage, 0, 0);
 
     stageMarkers.forEach((m, idx) => {
         const checked = !!collectedStates[idx];
@@ -198,7 +209,9 @@ function togglePiece(idx) {
 }
 
 /* --- Input Event Listeners & Transforms --- */
-function applyTransform() { canvas.style.transform = `translate3d(${offsetX}px,${offsetY}px,0) scale(${zoom})`; }
+function applyTransform() { 
+    if(canvas) canvas.style.transform = `translate3d(${offsetX}px,${offsetY}px,0) scale(${zoom})`; 
+}
 
 function setupGestureListeners() {
     viewport.onmousedown = (e) => { isDragging = true; startX = e.clientX - offsetX; startY = e.clientY - offsetY; };
@@ -290,6 +303,7 @@ async function runMobileScanner() {
         }
     }
 
+    if(!canvas) return;
     const mBuffer = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
     for (let y = 0; y < canvas.height - 22; y++) {
         for (let x = 0; x < canvas.width - 15; x++) {
@@ -313,4 +327,3 @@ function exportMasterJSON() {
     const blob = new Blob([JSON.stringify(out, null, 4)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'puzzlepieces_data.json'; a.click();
        }
-                                       
