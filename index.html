@@ -3,285 +3,117 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SPA: PIECE TRACKER ADMIN</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-
-        :root {
-            --sonic-blue: #0042ad;
-            --sonic-yellow: #ffe700;
-            --sonic-red: #d60000;
-            --emerald-green: #00ff41;
-            --panel-bg: #000c22;
-        }
-
-        body {
-            margin: 0; background: #000; color: #fff;
-            font-family: 'Press Start 2P', cursive; font-size: 10px;
-            display: flex; flex-direction: column; height: 100vh;
-            background-image: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
-                              linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            background-size: 100% 4px, 3px 100%; overflow: hidden;
-        }
-
-        header {
-            background: var(--sonic-blue); padding: 12px;
-            text-align: center; border-bottom: 4px solid var(--sonic-yellow);
-            box-shadow: 0 4px 0 var(--sonic-red); z-index: 100;
-        }
-
-        .main-layout { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
-
-        .dashboard {
-            background: var(--panel-bg); border-bottom: 4px solid #fff;
-            padding: 10px; display: flex; flex-direction: column; gap: 8px;
-            max-height: 40vh; overflow-y: auto;
-        }
-
-        /* Stats & Bars */
-        .progress-bar { width: 100%; height: 10px; background: #000; border: 2px solid #fff; margin: 4px 0 10px 0; }
-        .fill-stage { height: 100%; background: var(--emerald-green); width: 0%; transition: width 0.4s; }
-        .fill-total { height: 100%; background: #00d2ff; width: 0%; transition: width 0.4s; }
-
-        .level-grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-            gap: 4px; margin-bottom: 10px;
-        }
-        .level-btn {
-            padding: 8px; background: rgba(255,255,255,0.1); border: 1px solid var(--sonic-blue);
-            color: #fff; font-family: 'Press Start 2P'; font-size: 7px; cursor: pointer;
-        }
-        .level-btn.active { background: var(--sonic-blue); border-color: var(--sonic-yellow); }
-
-        .checklist-grid { display: flex; flex-wrap: wrap; gap: 5px; }
-        .check-item {
-            font-size: 7px; padding: 6px; border: 1px solid #444; cursor: pointer; background: #000; min-width: 35px; text-align: center;
-        }
-        .check-item.collected { color: #555; border-color: var(--emerald-green); opacity: 0.6; }
-
-        /* Map Viewer */
-        .container { flex: 1; display: flex; flex-direction: column; background: #111; position: relative; }
-        .toolbar { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px; background: #000; border-bottom: 2px solid #fff; }
-
-        button {
-            padding: 6px 8px; background: var(--emerald-green); border: 2px solid #fff;
-            font-family: 'Press Start 2P'; cursor: pointer; font-size: 7px;
-        }
-        button.admin { background: var(--sonic-yellow); color: #000; }
-        button.erase { background: var(--sonic-red); color: #fff; }
-        button.active-mode { background: #fff; color: #000; box-shadow: 0 0 10px #fff; }
-
-        .viewport { flex: 1; position: relative; overflow: hidden; cursor: grab; touch-action: none; }
-        canvas { position: absolute; image-rendering: pixelated; transform-origin: 0 0; }
-    </style>
+    <title>Sonic Pocket Adventure: Puzzle Piece Tracker</title>
+    
+    <link rel="stylesheet" href="./style.css">
 </head>
 <body>
 
-<header><h1>SPA: PIECE TRACKER (ADMIN)</h1></header>
+    <header>
+        <h1>SONIC POCKET ADVENTURE: PIECE TRACKER</h1>
+    </header>
 
-<div class="main-layout">
-    <div class="dashboard">
-        <div style="display:flex; justify-content:space-between; font-size:7px;">
-            <span>ZONE PROGRESS: <span id="stagePerc">0%</span></span>
-            <span>TOTAL: <span id="totalStats">0/0</span></span>
+    <div class="main-layout">
+        
+        <div class="dashboard">
+            <div class="stats-row">
+                <div class="stat-block">
+                    <div class="stat-label">
+                        <span>ZONE PROGRESS</span>
+                        <span id="stagePerc">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div id="stageFill" class="fill-stage"></div>
+                    </div>
+                </div>
+                
+                <div class="stat-block">
+                    <div class="stat-label">
+                        <span>GAME TOTAL</span>
+                        <span id="totalStats">0/0 (0%)</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div id="totalFill" class="fill-total"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="level-grid" id="levelMenu">
+                </div>
+
+            <div class="checklist-container">
+                <div class="checklist-title">CHECKLIST (TAP TO LOCATE | DBL-TAP TO CHECK):</div>
+                <div id="pieceChecklist" class="checklist-grid">
+                    </div>
+            </div>
         </div>
-        <div class="progress-bar"><div id="stageFill" class="fill-stage"></div></div>
-        <div class="progress-bar"><div id="totalFill" class="fill-total"></div></div>
 
-        <div class="level-grid" id="levelMenu"></div>
-        <div id="pieceChecklist" class="checklist-grid"></div>
+        <div class="container">
+            <div class="toolbar">
+                <button onclick="zoomToPiece(-1)">RESET VIEW</button>
+                <button onclick="exportMasterJSON()" class="export-btn">EXPORT JSON</button>
+                
+                <span style="font-size: 7px; color: var(--sonic-yellow); margin-left: auto; align-self: center; padding-right: 5px;">
+                    DEV MODE: CLICK MAP TO DEFINE PIECES
+                </span>
+            </div>
+
+            <div class="viewport" id="viewport">
+                <canvas id="canvas"></canvas>
+            </div>
+        </div>
     </div>
 
-    <div class="container">
-        <div class="toolbar">
-            <button onclick="triggerInput('mapFile')">MAP</button>
-            <button onclick="triggerInput('targetFile')">PIECE</button>
-            <button id="scanBtn" class="admin">SCAN</button>
-            <button id="modeCorrect" class="admin" onclick="setMode('correct')">CORRECT</button>
-            <button id="modeErase" class="erase" onclick="setMode('erase')">ERASE</button>
-            <button onclick="exportData()" style="background:var(--sonic-blue); color:#fff">JSON EXPORT</button>
-        </div>
+    <audio id="bgm" loop></audio>
 
-        <div class="viewport" id="viewport">
-            <canvas id="canvas"></canvas>
-        </div>
-    </div>
-</div>
-
-<input type="file" id="mapFile" hidden accept="image/*">
-<input type="file" id="targetFile" hidden accept="image/*">
-<audio id="bgm" loop></audio>
-
-<script>
-    const levels = [
-        "Neo South Island Act 1", "Neo South Island Act 2", "Secret Plant Act 1", "Secret Plant Act 2",
-        "Cosmic Casino Act 1", "Cosmic Casino Act 2", "Aquatic Relix Act 1", "Aquatic Relix Act 2",
-        "Sky Chase", "Aerobase", "Gigantic Angel Act 1", "Gigantic Angel Act 2", "Last Utopia"
-    ];
-
-    let db, currentLevel = levels[0], markers = [], zoom = 1.0, offsetX = 0, offsetY = 0;
-    let isDragging = false, lastX, lastY, initialPinchDist = 0, currentMode = 'explore';
-    const canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d'), viewport = document.getElementById('viewport');
-
-    // --- REUSING PREVIOUS DATABASE (SPA_Master_DB) ---
-    const request = indexedDB.open("SPA_Master_DB", 3);
-    request.onsuccess = e => { db = e.target.result; init(); };
-
-    async function saveAsset(key, val) { const tx = db.transaction("assets", "readwrite"); tx.objectStore("assets").put(val, key); }
-    async function getAsset(key) { return new Promise(r => { db.transaction("assets").objectStore("assets").get(key).onsuccess = e => r(e.target.result); }); }
-    async function saveMarkers() { const tx = db.transaction("markers", "readwrite"); tx.objectStore("markers").put(markers, currentLevel); updateGlobalStats(); }
-    async function getMarkers(lvl) { return new Promise(r => { db.transaction("markers").objectStore("markers").get(lvl).onsuccess = e => r(e.target.result || []); }); }
-
-    async function init() {
-        const menu = document.getElementById('levelMenu');
-        levels.forEach(lvl => {
-            const btn = document.createElement('button');
-            btn.className = 'level-btn';
-            btn.innerText = lvl;
-            btn.onclick = () => switchLevel(lvl);
-            menu.appendChild(btn);
-        });
-        switchLevel(currentLevel);
-        setupGestures();
-        updateGlobalStats();
-    }
-
-    async function switchLevel(lvl) {
-        currentLevel = lvl;
-        document.querySelectorAll('.level-btn').forEach(b => b.classList.toggle('active', b.innerText === lvl));
-        markers = await getMarkers(lvl);
-        const mapData = await getAsset(`map_${lvl}`);
-        if(mapData) {
-            const img = await loadImage(URL.createObjectURL(mapData));
-            canvas.width = img.width; canvas.height = img.height;
-            render();
-        } else { ctx.clearRect(0,0,canvas.width, canvas.height); updateChecklist(); }
-    }
-
-    // --- ADMIN SCANNER (100% MATCH) ---
-    document.getElementById('scanBtn').onclick = async () => {
-        const tBlob = await getAsset('template');
-        if(!tBlob || canvas.width === 0) return alert("Upload Piece Template!");
-        const tImg = await loadImage(URL.createObjectURL(tBlob));
-        const tPix = getPixels(tImg);
-        const mData = ctx.getImageData(0,0, canvas.width, canvas.height).data;
-        const mW = canvas.width;
-
-        for(let y=0; y < canvas.height - 22; y++) {
-            for(let x=0; x < canvas.width - 15; x++) {
-                let match = true;
-                for(let p of tPix) {
-                    const idx = ((y + p.y) * mW + (x + p.x)) * 4;
-                    if(mData[idx] !== p.r || mData[idx+1] !== p.g || mData[idx+2] !== p.b) { match = false; break; }
+    <script src="./app.js"></script>
+    
+    <script>
+        // Temporary developer function to quickly log placement markers on click
+        async function exportMasterJSON() {
+            if (typeof stageMarkers === 'undefined') return alert("Engine mapping uninitialized.");
+            
+            // Temporary check to compile all stored items from your active session memory
+            const compiledOutput = {};
+            for (const stage of STAGES) {
+                if (stage === currentStage) {
+                    compiledOutput[stage] = stageMarkers.map(m => ({ x: Math.round(m.x), y: Math.round(m.y) }));
+                } else {
+                    // Pull whatever coordinates are already cached in local storage parameters
+                    const saved = await fetchStageMarkersFromJSON(stage);
+                    compiledOutput[stage] = saved.map(m => ({ x: Math.round(m.x), y: Math.round(m.y) }));
                 }
-                if(match && !isDuplicate(x, y)) markers.push({x, y, collected: false});
             }
+            
+            const dataBlob = new Blob([JSON.stringify(compiledOutput, null, 4)], { type: 'application/json' });
+            const temporaryLink = document.createElement('a');
+            temporaryLink.href = URL.createObjectURL(dataBlob);
+            temporaryLink.download = 'PuzzlePieces_Data.json';
+            temporaryLink.click();
         }
-        markers.sort((a,b) => a.x - b.x);
-        saveMarkers(); render();
-    };
 
-    function isDuplicate(x, y) { return markers.some(m => Math.abs(m.x - x) < 5 && Math.abs(m.y - y) < 5); }
+        // Intercept standard click rules to append marker blocks if user taps a blank spot
+        document.addEventListener('DOMContentLoaded', () => {
+            const mapCanvas = document.getElementById('canvas');
+            mapCanvas.addEventListener('click', (e) => {
+                // Ensure we only register a coordinate add if we didn't hit an existing box element
+                const bounds = mapCanvas.getBoundingClientRect();
+                const clickX = (e.clientX - bounds.left) / zoom;
+                const clickY = (e.clientY - bounds.top) / zoom;
 
-    // --- UI & MODES ---
-    function setMode(mode) {
-        currentMode = (currentMode === mode) ? 'explore' : mode;
-        document.getElementById('modeCorrect').classList.toggle('active-mode', currentMode === 'correct');
-        document.getElementById('modeErase').classList.toggle('active-mode', currentMode === 'erase');
-    }
+                const clickedExisting = stageMarkers.some(marker => {
+                    return clickX >= marker.x && clickX <= (marker.x + 15) &&
+                           clickY >= marker.y && clickY <= (marker.y + 22);
+                });
 
-    canvas.onclick = e => {
-        if(isDragging) return;
-        const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left) / zoom;
-        const y = (e.clientY - rect.top) / zoom;
-
-        if(currentMode === 'correct') {
-            markers.push({x: Math.round(x-7), y: Math.round(y-11), collected: false});
-            markers.sort((a,b) => a.x - b.x);
-        } else if(currentMode === 'erase') {
-            markers = markers.filter(m => !(Math.abs(m.x + 7 - x) < 15 && Math.abs(m.y + 11 - y) < 15));
-        } else {
-            const m = markers.find(m => (Math.abs(m.x + 7 - x) < 15 && Math.abs(m.y + 11 - y) < 15));
-            if(m) m.collected = !m.collected;
-        }
-        saveMarkers(); render();
-    };
-
-    function render() {
-        getAsset(`map_${currentLevel}`).then(async blob => {
-            if(!blob) return;
-            const img = await loadImage(URL.createObjectURL(blob));
-            ctx.drawImage(img, 0, 0);
-            markers.forEach(m => {
-                ctx.lineWidth = 3;
-                ctx.strokeStyle = m.collected ? '#444' : '#00ff41';
-                ctx.strokeRect(m.x, m.y, 15, 22);
+                if (!clickedExisting) {
+                    // Standard template offset bounding adjustments to align coordinate crosshairs perfectly
+                    stageMarkers.push({ x: Math.round(clickX - 7.5), y: Math.round(clickY - 11), collected: false });
+                    stageMarkers.sort((a, b) => a.x - b.x); // Auto sort left to right instantly
+                    renderMapMatrix();
+                }
             });
-            updateChecklist(); updateTransform();
         });
-    }
-
-    function updateChecklist() {
-        const list = document.getElementById('pieceChecklist');
-        list.innerHTML = '';
-        markers.forEach((m, i) => {
-            const item = document.createElement('div');
-            item.className = `check-item ${m.collected ? 'collected' : ''}`;
-            item.innerText = `#${i+1}`;
-            item.onclick = () => { // Teleport
-                zoom = 2.5;
-                offsetX = (viewport.offsetWidth/2) - (m.x * zoom);
-                offsetY = (viewport.offsetHeight/2) - (m.y * zoom);
-                updateTransform();
-            };
-            item.ondblclick = () => { m.collected = !m.collected; saveMarkers(); render(); };
-            list.appendChild(item);
-        });
-        const coll = markers.filter(m => m.collected).length;
-        document.getElementById('stagePerc').innerText = markers.length ? Math.round(coll/markers.length*100)+'%' : '0%';
-        document.getElementById('stageFill').style.width = (coll/markers.length*100)+'%';
-    }
-
-    async function updateGlobalStats() {
-        let tP = 0, tC = 0;
-        for(let l of levels) { const m = await getMarkers(l); tP += m.length; tC += m.filter(x => x.collected).length; }
-        document.getElementById('totalStats').innerText = `${tC}/${tP}`;
-        document.getElementById('totalFill').style.width = (tC/tP*100)+'%';
-    }
-
-    // --- DATA EXPORT ---
-    async function exportData() {
-        const data = {};
-        for(let l of levels) { const m = await getMarkers(l); data[l] = m.map(p => ({x:p.x, y:p.y})); }
-        const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-        a.download = 'SPA_Master_Data.json'; a.click();
-    }
-
-    // --- GESTURES ---
-    function setupGestures() {
-        viewport.onmousedown = e => { isDragging = true; lastX = e.clientX; lastY = e.clientY; };
-        window.onmouseup = () => isDragging = false;
-        window.onmousemove = e => { if(isDragging) { offsetX += (e.clientX-lastX); offsetY += (e.clientY-lastY); lastX = e.clientX; lastY = e.clientY; updateTransform(); } };
-        viewport.addEventListener('touchstart', e => {
-            if(e.touches.length===1) { isDragging = true; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; }
-            else if(e.touches.length===2) initialPinchDist = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
-        });
-        viewport.addEventListener('touchmove', e => {
-            e.preventDefault();
-            if(e.touches.length===1 && isDragging) { offsetX += (e.touches[0].clientX-lastX); offsetY += (e.touches[0].clientY-lastY); lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; }
-            else if(e.touches.length===2) { const d = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY); zoom *= (d/initialPinchDist); initialPinchDist = d; }
-            updateTransform();
-        }, {passive:false});
-        viewport.onwheel = e => { e.preventDefault(); zoom *= (e.deltaY > 0 ? 0.9 : 1.1); updateTransform(); };
-    }
-
-    function updateTransform() { canvas.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${zoom})`; }
-    function triggerInput(id) { document.getElementById(id).click(); }
-    document.getElementById('mapFile').onchange = e => saveAsset(`map_${currentLevel}`, e.target.files[0]).then(() => switchLevel(currentLevel));
-    document.getElementById('targetFile').onchange = e => saveAsset('template', e.target.files[0]);
-    function loadImage(s) { return new Promise(r => {const i=new Image(); i.onload=()=>r(i); i.src=s;}); }
-</script>
+    </script>
 </body>
 </html>
