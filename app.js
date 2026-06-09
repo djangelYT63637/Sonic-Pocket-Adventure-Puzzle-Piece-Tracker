@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SONIC POCKET ADVENTURE: PIECE TRACKER - DEFINITIVE ENGINE (v13.0)
+   SONIC POCKET ADVENTURE: PIECE TRACKER - DEFINITIVE ENGINE (v14.0)
    ========================================================================== */
 
 // --- Configuration Constants ---
@@ -26,16 +26,16 @@ const MAP_FILES = {
     "Last Utopia":            "last-utopia.png"
 };
 
-// --- Dynamic GitHub Path Resolution Engine ---
-// Determines if running on GitHub Pages subdirectory or local machine workspace
+// --- Corrected Path Resolution Engine ---
 const getBasePath = () => {
     const loc = window.location;
     if (loc.hostname.includes("github.io")) {
-        // Extract exact repository directory name safely from current URL pathname
-        const repoName = loc.pathname.split('/')[1];
+        // Filter out empty strings caused by the leading slash to get the true repository name safely
+        const pathSegments = loc.pathname.split('/').filter(segment => segment.length > 0);
+        const repoName = pathSegments[0]; 
         return `${loc.origin}/${repoName}/`;
     }
-    return "./"; // Fallback path mapping for local testing
+    return "./"; // Fallback mapping for local testing environments
 };
 const BASE_PATH = getBasePath();
 
@@ -80,7 +80,7 @@ async function loadStageData(stageName) {
     currentStage = stageName;
     document.querySelectorAll('.level-btn').forEach(b => b.classList.toggle('active', b.innerText === stageName));
 
-    // Pull JSON coordinate mappings safely using absolute repository path strings
+    // Pull JSON coordinate mappings safely using corrected absolute path strings
     try {
         const res = await fetch(`${BASE_PATH}assets/puzzlepieces_data.json`);
         const data = await res.json();
@@ -88,7 +88,7 @@ async function loadStageData(stageName) {
     } catch (e) { stageMarkers = []; }
     stageMarkers.sort((a, b) => a.x - b.x);
 
-    // Sync IndexedDB user checkbox saves
+    // Sync IndexedDB user progress saves
     collectedStates = await new Promise(r => {
         if (!db) return r({});
         const req = db.transaction("user_progress", "readonly").objectStore("user_progress").get(stageName);
@@ -96,7 +96,7 @@ async function loadStageData(stageName) {
         req.onerror = () => r({});
     });
 
-    // Fire the map loader using the resolved repository folder path absolute coordinates
+    // Fire the map loader using the absolute resolved repository folder coordinates
     const fileName = MAP_FILES[stageName];
     activeMapImage.src = `${BASE_PATH}maps/${fileName}`;
     
@@ -187,6 +187,7 @@ function togglePiece(idx) {
 /* --- Input Event Listeners & Transforms --- */
 function applyTransform() { canvas.style.transform = `translate3d(${offsetX}px,${offsetY}px,0) scale(${zoom})`; }
 
+// Gesture handlers
 function setupGestureListeners() {
     viewport.onmousedown = (e) => { isDragging = true; startX = e.clientX - offsetX; startY = e.clientY - offsetY; };
     window.onmouseup = () => isDragging = false;
@@ -299,5 +300,5 @@ function exportMasterJSON() {
     const out = {}; out[currentStage] = stageMarkers.map(m => ({ x: Math.round(m.x), y: Math.round(m.y) }));
     const blob = new Blob([JSON.stringify(out, null, 4)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'puzzlepieces_data.json'; a.click();
-    }
-       
+                           }
+                   
