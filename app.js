@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SONIC POCKET ADVENTURE: PIECE TRACKER - DEFINITIVE ENGINE (v12.0)
+   SONIC POCKET ADVENTURE: PIECE TRACKER - DEFINITIVE ENGINE (v13.0)
    ========================================================================== */
 
 // --- Configuration Constants ---
@@ -9,7 +9,7 @@ const STAGES = [
     "Sky Chase", "Aerobase", "Gigantic Angel Act 1", "Gigantic Angel Act 2", "Last Utopia"
 ];
 
-// Explicit Hardcoded File Matrix (Zero guesswork, matches your renamed files perfectly)
+// Explicit Hardcoded File Matrix
 const MAP_FILES = {
     "Neo South Island Act 1": "neo-south-island-act-1.png",
     "Neo South Island Act 2": "neo-south-island-act-2.png",
@@ -25,6 +25,19 @@ const MAP_FILES = {
     "Gigantic Angel Act 2":   "gigantic-angel-act-2.png",
     "Last Utopia":            "last-utopia.png"
 };
+
+// --- Dynamic GitHub Path Resolution Engine ---
+// Determines if running on GitHub Pages subdirectory or local machine workspace
+const getBasePath = () => {
+    const loc = window.location;
+    if (loc.hostname.includes("github.io")) {
+        // Extract exact repository directory name safely from current URL pathname
+        const repoName = loc.pathname.split('/')[1];
+        return `${loc.origin}/${repoName}/`;
+    }
+    return "./"; // Fallback path mapping for local testing
+};
+const BASE_PATH = getBasePath();
 
 // --- Engine State Management ---
 let db = null, currentStage = STAGES[0], stageMarkers = [], collectedStates = {};
@@ -67,15 +80,15 @@ async function loadStageData(stageName) {
     currentStage = stageName;
     document.querySelectorAll('.level-btn').forEach(b => b.classList.toggle('active', b.innerText === stageName));
 
-    // Fetch coordinate data from your master JSON asset
+    // Pull JSON coordinate mappings safely using absolute repository path strings
     try {
-        const res = await fetch('./assets/puzzlepieces_data.json');
+        const res = await fetch(`${BASE_PATH}assets/puzzlepieces_data.json`);
         const data = await res.json();
         stageMarkers = data[stageName] || [];
     } catch (e) { stageMarkers = []; }
     stageMarkers.sort((a, b) => a.x - b.x);
 
-    // Sync IndexedDB personal user progress checkboxes
+    // Sync IndexedDB user checkbox saves
     collectedStates = await new Promise(r => {
         if (!db) return r({});
         const req = db.transaction("user_progress", "readonly").objectStore("user_progress").get(stageName);
@@ -83,12 +96,11 @@ async function loadStageData(stageName) {
         req.onerror = () => r({});
     });
 
-    // Pull the exact hardcoded filename directly from the dictionary matrix
+    // Fire the map loader using the resolved repository folder path absolute coordinates
     const fileName = MAP_FILES[stageName];
-    activeMapImage.src = `./maps/${fileName}`;
+    activeMapImage.src = `${BASE_PATH}maps/${fileName}`;
     
     activeMapImage.onload = () => {
-        // Explicitly set dimensions before triggering render to lock canvas aspect limits
         canvas.width = activeMapImage.width;
         canvas.height = activeMapImage.height;
         canvas.style.width = activeMapImage.width + "px";
@@ -104,7 +116,7 @@ async function loadStageData(stageName) {
         canvas.style.width = "600px"; canvas.style.height = "300px";
         ctx.fillStyle = "#000c22"; ctx.fillRect(0, 0, 600, 300);
         ctx.fillStyle = "#fff"; ctx.font = "8px 'Press Start 2P'";
-        ctx.fillText(`FAILED TO LOAD: /maps/${fileName}`, 40, 150);
+        ctx.fillText(`MISSING LINK: ${BASE_PATH}maps/${fileName}`, 20, 150);
         buildChecklistUI();
     };
 }
@@ -147,13 +159,12 @@ function buildChecklistUI() {
         };
         item.ondblclick = () => togglePiece(idx);
         
-        let t; // Touch long-press simulation for mobile
+        let t;
         item.addEventListener('touchstart', () => { t = setTimeout(() => togglePiece(idx), 500); }, {passive:true});
         item.addEventListener('touchend', () => clearTimeout(t));
         checklistGrid.appendChild(item);
     });
     
-    // UI Progress Metrics Reporting
     const currentCollected = stageMarkers.filter((_, i) => collectedStates[i]).length;
     const stagePerc = stageMarkers.length ? Math.round((currentCollected / stageMarkers.length) * 100) : 0;
     document.getElementById('stagePerc').innerText = `${stagePerc}%`;
