@@ -35,7 +35,7 @@
 
         <div class="container">
             <div class="toolbar">
-                <button onclick="zoom = 0.5; offsetX = 20; offsetY = 20; if(canvas) canvas.style.transform = 'none'; applyTransform();">RESET VIEW</button>
+                <button onclick="zoom = 0.5; offsetX = 20; offsetY = 20; if(window.canvas) window.canvas.style.transform = 'none'; applyTransform();">RESET VIEW</button>
                 
                 <div class="admin-ui" style="display:none; gap:4px; flex-wrap:wrap; width:100%;">
                     <button onclick="adminManualAdd()" style="background:#00ff41; color:#000;">+ ADD AT CENTER</button>
