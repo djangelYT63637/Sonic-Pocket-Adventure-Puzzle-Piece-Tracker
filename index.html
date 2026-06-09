@@ -2,66 +2,58 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sonic Pocket Adventure - Puzzle Piece Tracker</title>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sonic Pocket Adventure: Puzzle Piece Tracker</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <header>
-        <div class="header-content">
-            <h1>SONIC POCKET ADVENTURE PIECE TRACKER</h1>
-            <div class="stats-container">
-                <div class="stat-box">STAGE PROGRESS: <span id="stagePerc">0%</span></div>
-                <div class="stat-box">TOTAL COLLECTED: <span id="totalStats">0/0</span></div>
-            </div>
-            <div class="progress-bar-bg">
-                <div id="stageFill" class="progress-bar-fill" style="width: 0%;"></div>
-            </div>
-        </div>
+        <h1>SONIC POCKET ADVENTURE: PIECE TRACKER</h1>
     </header>
 
     <div class="main-layout">
-        
-        <nav class="sidebar">
-            <h2 class="menu-title">SELECT STAGE</h2>
-            <div id="levelMenu" class="level-menu-grid">
+        <div class="dashboard">
+            <div class="stats-row">
+                <div class="stat-block">
+                    <div class="stat-label"><span>ZONE PROGRESS</span><span id="stagePerc">0%</span></div>
+                    <div class="progress-bar"><div id="stageFill" class="fill-stage"></div></div>
                 </div>
-        </nav>
-
-        <main class="workspace">
-            <div class="viewport-wrapper">
-                <div id="viewport" class="viewport">
-                    <canvas id="canvas"></canvas>
+                <div class="stat-block">
+                    <div class="stat-label"><span>GAME TOTAL</span><span id="totalStats">0/0</span></div>
+                    <div class="progress-bar"><div id="totalFill" class="fill-total"></div></div>
                 </div>
             </div>
-            
-            <section class="checklist-container">
-                <h3 class="checklist-title">PIECE CHECKLIST (Dbl-Click/Hold to toggle, Click to pan)</h3>
-                <div id="pieceChecklist" class="checklist-grid">
-                    </div>
-            </section>
-        </main>
 
-        <aside class="admin-ui" style="display: none;">
-            <div class="admin-panel">
-                <h3 class="admin-title">DEVELOPER DEVELOPMENT CONTROLS</h3>
-                <button class="admin-btn add" onclick="adminManualAdd()">MANUAL ADD PIECE AT VIEW-CENTER</button>
-                <button class="admin-btn delete" onclick="adminManualDelete()">MANUAL DELETE SELECTED PIECE</button>
-                <hr class="admin-divider">
-                <label class="admin-label">PIXEL MATRIX PATTERN MATCHER SCANNER:</label>
-                <button class="admin-btn scan" onclick="document.getElementById('adminTemplateFileInput').click()">UPLOAD TARGET SPRITE TEMPLATE</button>
-                <button class="admin-btn run" onclick="runMobileScanner()">RUN AUTOMATED LEVEL SCANNER ARRAY</button>
-                <hr class="admin-divider">
-                <button class="admin-btn export" onclick="exportMasterJSON()">GENERATE & EXPORT MASTER DATA JSON</button>
+            <div class="level-grid" id="levelMenu"></div>
+
+            <div class="checklist-container">
+                <div class="checklist-title">CHECKLIST (TAP TO VIEW | DBL-TAP TO CHECK):</div>
+                <div id="pieceChecklist" class="checklist-grid"></div>
             </div>
-        </aside>
+        </div>
 
+        <div class="container">
+            <div class="toolbar">
+                <button onclick="zoom = 0.5; offsetX = 20; offsetY = 20; if(canvas) canvas.style.transform = 'none'; applyTransform();">RESET VIEW</button>
+                
+                <div class="admin-ui" style="display:none; gap:4px; flex-wrap:wrap; width:100%;">
+                    <button onclick="adminManualAdd()" style="background:#00ff41; color:#000;">+ ADD AT CENTER</button>
+                    <button onclick="adminManualDelete()" style="background:#d60000; color:#fff;">- DELETE ID</button>
+                    <button onclick="document.getElementById('adminTemplateFileInput').click()" style="background:#0042ad; color:#fff;">CHOOSE TEMPLATE</button>
+                    <button onclick="runMobileScanner()" style="background:#ffe700; color:#000;">RUN SCANNER</button>
+                    <button onclick="exportMasterJSON()" style="background:#fff; color:#000;">EXPORT JSON</button>
+                </div>
+            </div>
+
+            <div class="viewport" id="viewport">
+                <canvas id="canvas"></canvas>
+            </div>
+        </div>
     </div>
 
-    <input type="file" id="adminTemplateFileInput" class="hidden-uploader" accept="image/*" style="display: none;">
-
-    <script src="./app.js"></script>
+    <input type="file" id="adminTemplateFileInput" hidden accept="image/*">
+    
+    <script src="app.js"></script>
 </body>
 </html>
