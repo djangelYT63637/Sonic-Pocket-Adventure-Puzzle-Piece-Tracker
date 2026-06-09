@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SONIC POCKET ADVENTURE: PIECE TRACKER - UNIVERSAL CONFORMITY STYLES
+   SONIC POCKET ADVENTURE: PIECE TRACKER - DEFINITIVE STYLE SHEET
    ========================================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
@@ -14,6 +14,7 @@
     --text-dim: #555555;
     --border-light: #ffffff;
     --shadow-dark: #000000;
+    --gamepad-focus: #ff00ff; /* Neon pink indicator for active controller selection */
 }
 
 * {
@@ -31,17 +32,17 @@ body {
     display: flex;
     flex-direction: column;
     height: 100vh;
-    height: -webkit-fill-available;
+    overflow: hidden;
+    
     background-image: 
         linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
         linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
     background-size: 100% 4px, 3px 100%;
-    overflow: hidden;
 }
 
 header {
     background: var(--sonic-blue);
-    padding: 8px 12px;
+    padding: 14px;
     text-align: center;
     border-bottom: 4px solid var(--sonic-yellow);
     box-shadow: 0 4px 0 var(--sonic-red);
@@ -52,18 +53,20 @@ header {
     align-items: center;
 }
 
+/* Upgraded Logo Sizing Engine Constraints */
 .header-logo {
-    max-height: 28px;
+    height: 48px;
+    max-height: 8vh;
     width: auto;
     object-fit: contain;
-    filter: drop-shadow(2px 2px 0px var(--shadow-dark));
+    filter: drop-shadow(3px 3px 0px var(--shadow-dark));
 }
 
 .main-layout {
     display: flex;
     flex-direction: column;
     flex: 1;
-    height: calc(100vh - 48px);
+    height: calc(100vh - 80px); /* Forces full usage of remaining display space */
     overflow: hidden;
 }
 
@@ -74,7 +77,7 @@ header {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    max-height: 42vh;
+    max-height: 45vh;
     overflow-y: auto;
     flex-shrink: 0;
 }
@@ -96,12 +99,11 @@ header {
     text-shadow: 1px 1px var(--shadow-dark);
     display: flex;
     justify-content: space-between;
-    line-height: 1.4;
 }
 
 .progress-bar {
     width: 100%;
-    height: 10px;
+    height: 12px;
     background: var(--shadow-dark);
     border: 2px solid var(--border-light);
     margin-top: 4px;
@@ -112,13 +114,13 @@ header {
 
 .level-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: 6px;
     margin: 4px 0;
 }
 
 .level-btn {
-    padding: 8px;
+    padding: 10px 8px;
     background: rgba(255, 255, 255, 0.06);
     border: 2px solid var(--sonic-blue);
     color: var(--border-light);
@@ -134,42 +136,53 @@ header {
 .level-btn.active {
     background: var(--sonic-blue);
     border-color: var(--sonic-yellow);
-    box-shadow: inset 0 0 6px rgba(255, 255, 255, 0.5);
+}
+
+/* Controller Tracking Visual Cues */
+.level-btn.gamepad-focused {
+    border-color: var(--gamepad-focus) !important;
+    background: rgba(255, 0, 255, 0.2);
 }
 
 .checklist-container {
     border-top: 2px dashed rgba(255, 255, 255, 0.15);
-    padding-top: 8px;
+    padding-top: 10px;
 }
 
 .checklist-title { color: var(--sonic-yellow); font-size: 7px; margin-bottom: 6px; }
-.checklist-grid { display: flex; flex-wrap: wrap; gap: 4px; }
+.checklist-grid { display: flex; flex-wrap: wrap; gap: 5px; }
 
 .check-item {
     font-size: 6px;
-    padding: 6px 4px;
+    padding: 8px 6px;
     border: 1px solid #333;
     cursor: pointer;
     background: var(--shadow-dark);
-    min-width: 38px;
+    min-width: 44px;
     text-align: center;
     user-select: none;
 }
 
 .check-item.collected {
     color: var(--text-dim);
-    background: #060614;
+    background: #050512;
     border-color: var(--emerald-green);
     opacity: 0.5;
+}
+
+.check-item.gamepad-focused {
+    border-color: var(--gamepad-focus) !important;
+    background: rgba(255, 0, 255, 0.25);
 }
 
 .container {
     flex: 1;
     display: flex;
     flex-direction: column;
-    background: #0a0a12;
+    background: #090911;
     position: relative;
     overflow: hidden;
+    height: 100%; /* Spreads across the layout frame completely */
 }
 
 .toolbar {
@@ -183,7 +196,7 @@ header {
 }
 
 button {
-    padding: 6px 10px;
+    padding: 6px 12px;
     background: var(--emerald-green);
     border: 2px solid var(--border-light);
     color: var(--shadow-dark);
@@ -202,8 +215,6 @@ button {
     touch-action: none;
 }
 
-.viewport:active { cursor: grabbing; }
-
 canvas {
     position: absolute;
     top: 0;
@@ -215,24 +226,20 @@ canvas {
     will-change: transform;
 }
 
-/* --- PREMIUM LAPTOP/DESKTOP ADVANCED SCREEN LAYOUT --- */
+/* --- LAPTOP & PC SCREEN OPTIMIZATION MATRIX BREAKPOINT --- */
 @media (min-width: 900px) {
     .main-layout {
         flex-direction: row;
-        height: calc(100vh - 50px);
+        height: calc(100vh - 80px);
     }
     .dashboard {
-        width: 360px; /* Enhanced view room allocation space */
+        width: 380px;
         max-height: 100%;
         border-bottom: none;
         border-right: 4px solid var(--border-light);
     }
     .level-grid {
         grid-template-columns: 1fr 1fr;
-    }
-    .check-item {
-        min-width: 46px;
-        padding: 8px 6px;
     }
 }
 
