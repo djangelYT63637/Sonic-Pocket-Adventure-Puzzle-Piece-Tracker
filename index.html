@@ -2,14 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Sonic Pocket Adventure: Puzzle Piece Tracker</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <header>
-        <img src="assets/logo.png" alt="SONIC POCKET ADVENTURE: PIECE TRACKER" class="header-logo">
+        <img src="assets/logo.png" alt="SONIC POCKET ADVENTURE" class="header-logo">
     </header>
 
     <div class="main-layout">
@@ -28,7 +28,7 @@
             <div class="level-grid" id="levelMenu"></div>
 
             <div class="checklist-container">
-                <div class="checklist-title">CHECKLIST (TAP TO VIEW | DBL-TAP TO CHECK):</div>
+                <div class="checklist-title">CHECKLIST:</div>
                 <div id="pieceChecklist" class="checklist-grid"></div>
             </div>
         </div>
@@ -38,7 +38,7 @@
                 <button onclick="centerMapInViewport();">RESET VIEW</button>
                 
                 <div class="admin-ui" style="display:none; gap:4px; flex-wrap:wrap; width:100%;">
-                    <button onclick="adminManualAdd()" style="background:#00ff41; color:#000;">+ ADD AT CENTER</button>
+                    <div style="font-size:7px; color:#ffe700; width:100%; margin-bottom:2px;">[ADMIN MODE: CLICK ON MAP TO ADD PIECE]</div>
                     <button onclick="adminManualDelete()" style="background:#d60000; color:#fff;">- DELETE ID</button>
                     <button onclick="runAutoScanner()" style="background:#ffe700; color:#000;">RUN AUTO SCANNER</button>
                     <button onclick="exportMasterJSON()" style="background:#fff; color:#000;">EXPORT JSON</button>
