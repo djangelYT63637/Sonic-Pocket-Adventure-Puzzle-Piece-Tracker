@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SONIC POCKET ADVENTURE: PIECE TRACKER - DEFINITIVE STYLE SHEET
+   SONIC POCKET ADVENTURE: PIECE TRACKER - PREMIUM CORE STYLE MATRIX
    ========================================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
@@ -14,7 +14,7 @@
     --text-dim: #555555;
     --border-light: #ffffff;
     --shadow-dark: #000000;
-    --gamepad-focus: #ff00ff; /* Neon pink indicator for active controller selection */
+    --gamepad-focus: #ff00ff;
 }
 
 * {
@@ -42,7 +42,7 @@ body {
 
 header {
     background: var(--sonic-blue);
-    padding: 14px;
+    padding: 16px 12px;
     text-align: center;
     border-bottom: 4px solid var(--sonic-yellow);
     box-shadow: 0 4px 0 var(--sonic-red);
@@ -53,45 +53,45 @@ header {
     align-items: center;
 }
 
-/* Upgraded Logo Sizing Engine Constraints */
+/* HIGH VISIBILITY LOGO ENGINE OPTIMIZATION */
 .header-logo {
-    height: 48px;
-    max-height: 8vh;
+    height: 72px; /* Increased for arm's length visibility */
+    max-height: 12vh;
     width: auto;
     object-fit: contain;
-    filter: drop-shadow(3px 3px 0px var(--shadow-dark));
+    filter: drop-shadow(4px 4px 0px var(--shadow-dark));
 }
 
 .main-layout {
     display: flex;
     flex-direction: column;
     flex: 1;
-    height: calc(100vh - 80px); /* Forces full usage of remaining display space */
+    height: calc(100vh - 108px);
     overflow: hidden;
 }
 
+/* ULTRA SMART PHONE REAL ESTATE MANAGEMENT DISPLAY MATRIX */
 .dashboard {
     background: var(--panel-bg);
     border-bottom: 4px solid var(--border-light);
-    padding: 12px;
+    padding: 10px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    max-height: 45vh;
+    gap: 8px;
+    max-height: 32vh; /* Smaller on mobile portrait to give map room */
     overflow-y: auto;
     flex-shrink: 0;
 }
 
 .stats-row {
     display: flex;
-    gap: 15px;
+    gap: 10px;
     flex-wrap: wrap;
-    justify-content: space-between;
 }
 
 .stat-block {
     flex: 1;
-    min-width: 140px;
+    min-width: 130px;
 }
 
 .stat-label {
@@ -103,29 +103,29 @@ header {
 
 .progress-bar {
     width: 100%;
-    height: 12px;
+    height: 10px;
     background: var(--shadow-dark);
     border: 2px solid var(--border-light);
-    margin-top: 4px;
+    margin-top: 3px;
 }
 
-.fill-stage { height: 100%; background: var(--emerald-green); width: 0%; transition: width 0.3s ease; }
-.fill-total { height: 100%; background: var(--progress-blue); width: 0%; transition: width 0.3s ease; }
+.fill-stage { height: 100%; background: var(--emerald-green); width: 0%; transition: width 0.2s ease; }
+.fill-total { height: 100%; background: var(--progress-blue); width: 0%; transition: width 0.2s ease; }
 
 .level-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 6px;
-    margin: 4px 0;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 4px;
+    margin: 2px 0;
 }
 
 .level-btn {
-    padding: 10px 8px;
-    background: rgba(255, 255, 255, 0.06);
+    padding: 8px 6px;
+    background: rgba(255, 255, 255, 0.05);
     border: 2px solid var(--sonic-blue);
     color: var(--border-light);
     font-family: 'Press Start 2P', cursive;
-    font-size: 7px;
+    font-size: 6px;
     cursor: pointer;
     text-align: left;
     white-space: nowrap;
@@ -138,7 +138,6 @@ header {
     border-color: var(--sonic-yellow);
 }
 
-/* Controller Tracking Visual Cues */
 .level-btn.gamepad-focused {
     border-color: var(--gamepad-focus) !important;
     background: rgba(255, 0, 255, 0.2);
@@ -146,28 +145,27 @@ header {
 
 .checklist-container {
     border-top: 2px dashed rgba(255, 255, 255, 0.15);
-    padding-top: 10px;
+    padding-top: 6px;
 }
 
-.checklist-title { color: var(--sonic-yellow); font-size: 7px; margin-bottom: 6px; }
-.checklist-grid { display: flex; flex-wrap: wrap; gap: 5px; }
+.checklist-title { color: var(--sonic-yellow); font-size: 6px; margin-bottom: 4px; }
+.checklist-grid { display: flex; flex-wrap: wrap; gap: 4px; }
 
 .check-item {
     font-size: 6px;
-    padding: 8px 6px;
+    padding: 6px 4px;
     border: 1px solid #333;
     cursor: pointer;
     background: var(--shadow-dark);
-    min-width: 44px;
+    min-width: 38px;
     text-align: center;
-    user-select: none;
 }
 
 .check-item.collected {
     color: var(--text-dim);
-    background: #050512;
+    background: #04040e;
     border-color: var(--emerald-green);
-    opacity: 0.5;
+    opacity: 0.4;
 }
 
 .check-item.gamepad-focused {
@@ -179,10 +177,9 @@ header {
     flex: 1;
     display: flex;
     flex-direction: column;
-    background: #090911;
+    background: #07070d;
     position: relative;
     overflow: hidden;
-    height: 100%; /* Spreads across the layout frame completely */
 }
 
 .toolbar {
@@ -196,13 +193,12 @@ header {
 }
 
 button {
-    padding: 6px 12px;
+    padding: 5px 10px;
     background: var(--emerald-green);
     border: 2px solid var(--border-light);
     color: var(--shadow-dark);
     font-family: 'Press Start 2P', cursive;
-    font-size: 7px;
-    cursor: pointer;
+    font-size: 6px;
 }
 
 .viewport {
@@ -212,7 +208,6 @@ button {
     position: relative;
     overflow: hidden;
     cursor: grab;
-    touch-action: none;
 }
 
 canvas {
@@ -226,14 +221,14 @@ canvas {
     will-change: transform;
 }
 
-/* --- LAPTOP & PC SCREEN OPTIMIZATION MATRIX BREAKPOINT --- */
-@media (min-width: 900px) {
+/* --- ADVANCED DESKTOP & LANDSCAPE UNIFICATION RULES --- */
+@media (min-width: 768px) {
     .main-layout {
         flex-direction: row;
-        height: calc(100vh - 80px);
+        height: calc(100vh - 108px);
     }
     .dashboard {
-        width: 380px;
+        width: 360px;
         max-height: 100%;
         border-bottom: none;
         border-right: 4px solid var(--border-light);
@@ -243,6 +238,16 @@ canvas {
     }
 }
 
-::-webkit-scrollbar { width: 6px; height: 6px; }
+/* SMARTPHONE TRUE HORIZONTAL REAL ESTATE RECOVERY */
+@media (max-width: 767px) and (orientation: landscape) {
+    header { padding: 8px; }
+    .header-logo { height: 40px; }
+    .main-layout { flex-direction: row; height: calc(100vh - 60px); }
+    .dashboard { width: 220px; max-height: 100%; border-bottom: none; border-right: 2px solid var(--border-light); }
+    .level-grid { grid-template-columns: 1fr; }
+}
+
+/* Scrollbar customization */
+::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: var(--shadow-dark); }
 ::-webkit-scrollbar-thumb { background: var(--sonic-yellow); }
