@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SONIC POCKET ADVENTURE: PIECE TRACKER - PREMIUM CORE STYLE MATRIX
+   SONIC POCKET ADVENTURE: PIECE TRACKER - UNIVERSAL CONFORMITY v1.0
    ========================================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
@@ -42,7 +42,7 @@ body {
 
 header {
     background: var(--sonic-blue);
-    padding: 16px 12px;
+    padding: 18px 14px;
     text-align: center;
     border-bottom: 4px solid var(--sonic-yellow);
     box-shadow: 0 4px 0 var(--sonic-red);
@@ -53,24 +53,23 @@ header {
     align-items: center;
 }
 
-/* HIGH VISIBILITY LOGO ENGINE OPTIMIZATION */
+/* ADVANCED LOGO VISIBILITY ENGINE - MAXIMAL SCALE */
 .header-logo {
-    height: 72px; /* Increased for arm's length visibility */
-    max-height: 12vh;
+    height: 90px; /* Increased to v1.0 Maximal visibility scale */
+    max-height: 14vh;
     width: auto;
     object-fit: contain;
-    filter: drop-shadow(4px 4px 0px var(--shadow-dark));
+    filter: drop-shadow(4px 4px 1px var(--shadow-dark));
 }
 
 .main-layout {
     display: flex;
     flex-direction: column;
     flex: 1;
-    height: calc(100vh - 108px);
     overflow: hidden;
 }
 
-/* ULTRA SMART PHONE REAL ESTATE MANAGEMENT DISPLAY MATRIX */
+/* SMARTPHONE REAL ESTATE MANAGEMENT - OPTIMAL PADDING */
 .dashboard {
     background: var(--panel-bg);
     border-bottom: 4px solid var(--border-light);
@@ -78,7 +77,7 @@ header {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    max-height: 32vh; /* Smaller on mobile portrait to give map room */
+    max-height: 30vh; /* Keeps dashboard tight to preserve map room */
     overflow-y: auto;
     flex-shrink: 0;
 }
@@ -221,28 +220,23 @@ canvas {
     will-change: transform;
 }
 
-/* --- ADVANCED DESKTOP & LANDSCAPE UNIFICATION RULES --- */
+/* --- ADVANCED DESKTOP & LANDSCAPE UNIFICATION --- */
 @media (min-width: 768px) {
-    .main-layout {
-        flex-direction: row;
-        height: calc(100vh - 108px);
-    }
+    .main-layout { flex-direction: row; }
     .dashboard {
         width: 360px;
         max-height: 100%;
         border-bottom: none;
         border-right: 4px solid var(--border-light);
     }
-    .level-grid {
-        grid-template-columns: 1fr 1fr;
-    }
+    .level-grid { grid-template-columns: 1fr 1fr; }
 }
 
 /* SMARTPHONE TRUE HORIZONTAL REAL ESTATE RECOVERY */
 @media (max-width: 767px) and (orientation: landscape) {
     header { padding: 8px; }
     .header-logo { height: 40px; }
-    .main-layout { flex-direction: row; height: calc(100vh - 60px); }
+    .main-layout { flex-direction: row; }
     .dashboard { width: 220px; max-height: 100%; border-bottom: none; border-right: 2px solid var(--border-light); }
     .level-grid { grid-template-columns: 1fr; }
 }
