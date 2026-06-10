@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SONIC POCKET ADVENTURE: PIECE TRACKER - CORE INTERFACE ENGINE (v1.0)
+   SONIC POCKET ADVENTURE: PIECE TRACKER - UNIVERSAL CONFORMITY ENGINE v1.0
    ========================================================================== */
 
 const STAGES = [
@@ -26,6 +26,7 @@ const MAP_FILES = {
 
 const getBasePath = () => {
     const loc = window.location;
+    // CRITICAL DOMAIN UNIFICATION MATRIX: Automatically adjusts resolution for custom URLs or subfolders.
     if (loc.hostname.includes("github.io")) {
         const pathSegments = loc.pathname.split('/').filter(s => s.length > 0);
         return `${loc.origin}/${pathSegments[0]}/`;
@@ -34,13 +35,14 @@ const getBasePath = () => {
 };
 const BASE_PATH = getBasePath();
 
+// Engine Core Context Properties Matrix
 let db = null, currentStage = STAGES[0], stageMarkers = [], collectedStates = {};
 let zoom = 0.5, offsetX = 0, offsetY = 0, isDragging = false, startX = 0, startY = 0, initialPinchDist = 0;
 let isAdminMode = new URLSearchParams(window.location.search).get('mode') === 'admin';
 let globalActiveMapImage = null;
 
-// Gamepad configuration parameters 
-let controllerFocusTarget = "stages";
+// Hardware Controller Matrix
+let controllerFocusTarget = "stages"; // Options: "stages" | "checklist"
 let focusedStageIndex = 0;
 let focusedChecklistIndex = 0;
 let lastButtonState = {};
@@ -57,6 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('.admin-ui').forEach(el => el.style.display = isAdminMode ? 'flex' : 'none');
     
+    // Core community IndexedDB Matrix Storage Initialization Loop
     const dbRequest = indexedDB.open("SPA_Community_Tracker_DB", 3);
     dbRequest.onupgradeneeded = (e) => {
         const d = e.target.result;
@@ -100,6 +103,7 @@ async function loadStageData(stageName) {
         stageMarkers = customCoords;
     } else {
         try {
+            // Communities Coordinates Assets Blueprint Reference
             const res = await fetch(`${BASE_PATH}assets/puzzlepieces_data.json`);
             if (!res.ok) throw new Error();
             const data = await res.json();
@@ -121,6 +125,7 @@ async function loadStageData(stageName) {
     const targetSrcURL = `${BASE_PATH}maps/${fileName}?t=${new Date().getTime()}`;
     
     const imgWorker = new Image();
+    // OFFLINE SYNC FIX: Ensuring mobile engine cross-blocking compatibility by removing redundent crossOrigin assignment.
     
     imgWorker.onload = () => {
         globalActiveMapImage = imgWorker;
@@ -142,7 +147,7 @@ async function loadStageData(stageName) {
             canvas.style.width = "100%"; canvas.style.height = "auto";
             ctx.fillStyle = "#000c22"; ctx.fillRect(0, 0, 600, 340);
             ctx.fillStyle = "#ff3333"; ctx.font = "8px 'Press Start 2P'";
-            ctx.fillText("MAP RENDER PIPELINE OFFLINE COMPATIBILITY TIMEOUT", 20, 50);
+            ctx.fillText("IMAGE ASSET OFFLINE RETRIEVAL ENGINE BLOCK TRAVELED", 20, 50);
         }
         buildChecklistUI();
     };
@@ -210,6 +215,7 @@ async function buildChecklistUI() {
     const currentCollected = stageMarkers.filter((_, i) => collectedStates[i]).length;
     const stagePerc = stageMarkers.length ? Math.round((currentCollected / stageMarkers.length) * 100) : 0;
     
+    // Community UI label progress engine metrics
     const stagePercEl = document.getElementById('stagePerc');
     const stageFillEl = document.getElementById('stageFill');
     if (stagePercEl) stagePercEl.innerText = `${stagePerc}% [${currentCollected}/${stageMarkers.length}]`;
@@ -289,7 +295,7 @@ function setupGestureListeners() {
             const b = canvas.getBoundingClientRect();
             const cx = (e.clientX - b.left) / zoom, cy = (e.clientY - b.top) / zoom;
             
-            // ADMIN MODE DIRECT CLINK INJECTION SYSTEM
+            // Core Community Admin Coordination Injection System Blueprint
             if (isAdminMode) {
                 const clickedExistingPiece = stageMarkers.findIndex(m => cx >= m.x && cx <= (m.x + 15) && cy >= m.y && cy <= (m.y + 22));
                 if (clickedExistingPiece === -1) {
@@ -317,7 +323,7 @@ function zoomCalc(m, fx, fy) {
 }
 
 /* ==========================================================================
-   CROSS-PLATFORM ADVANCED HARDWARE CONTROLLER LAYOUT CROSS-MAPPER
+   ADVANCED GAMEPAD CROSS-MAPPING & DEBOUNCE ENGINE (v1.0 stable)
    ========================================================================== */
 function setupGamepadSystem() {
     window.addEventListener("gamepadconnected", (event) => {
@@ -326,18 +332,7 @@ function setupGamepadSystem() {
             const gp = gamepads[0];
             if (!gp) return requestAnimationFrame(loop);
 
-            // DYNAMIC LAYOUT CROSS-MAPPER DETECTION MATRIX
-            let idString = gp.id.toLowerCase();
-            let actionButtonIndex = 0;  // Standard Western South Button (Xbox A, PlayStation Cross)
-            let backButtonIndex = 1;    // Standard Western East Button
-
-            if (idString.includes("licom") || idString.includes("switch") || idString.includes("nintendo") || idString.includes("sega")) {
-                // Adjusts for Nintendo / Eastern Controller Layouts (Physical Right Button is Action)
-                actionButtonIndex = 1; 
-                backButtonIndex = 0;
-            }
-
-            // Sticks Control
+            // Stick Control Matrix Blueprint
             if (Math.abs(gp.axes[0]) > 0.18) offsetX -= gp.axes[0] * 8;
             if (Math.abs(gp.axes[1]) > 0.18) offsetY -= gp.axes[1] * 8;
             if (Math.abs(gp.axes[3]) > 0.18) {
@@ -346,36 +341,46 @@ function setupGamepadSystem() {
                 zoomCalc(gp.axes[3] > 0 ? 0.96 : 1.04, cX, cY);
             }
 
-            // D-Pad Menu Focus Scanning
+            // ADVANCED UNIVERSAL MAPPING CROSS-RESOLVER
+            // Determines which browser index physical 'A' vs 'B' assignments correspond with.
+            let standardMappingSOUTH = 0; // Xbox/PlayStation A/Cross
+            let standardMappingEAST = 1;
+
+            if (gp.id.includes("ic-Con") || gp.id.includes("Nintendo") || gp.id.includes("Switch")) {
+                standardMappingSOUTH = 1; // Nintendo physical East button (A)
+                standardMappingEAST = 0;
+            }
+
+            // Optimal Debounce Control Timing Cycle (130ms for responsiveness)
             const now = Date.now();
             if (now > gamepadDebounceTimeout) {
                 if (gp.buttons[12]?.pressed) { // UP
                     controllerFocusTarget = "stages";
                     focusedStageIndex = (focusedStageIndex - 1 + STAGES.length) % STAGES.length;
-                    focusTargetItem(); gamepadDebounceTimeout = now + 160;
+                    focusTargetItem(); gamepadDebounceTimeout = now + 130;
                 } else if (gp.buttons[13]?.pressed) { // DOWN
                     controllerFocusTarget = "stages";
                     focusedStageIndex = (focusedStageIndex + 1) % STAGES.length;
-                    focusTargetItem(); gamepadDebounceTimeout = now + 160;
+                    focusTargetItem(); gamepadDebounceTimeout = now + 130;
                 } else if (gp.buttons[14]?.pressed) { // LEFT
                     if (stageMarkers.length) {
                         controllerFocusTarget = "checklist";
                         focusedChecklistIndex = (focusedChecklistIndex - 1 + stageMarkers.length) % stageMarkers.length;
                         focusTargetItem(); triggerChecklistTeleport();
                     }
-                    gamepadDebounceTimeout = now + 160;
+                    gamepadDebounceTimeout = now + 130;
                 } else if (gp.buttons[15]?.pressed) { // RIGHT
                     if (stageMarkers.length) {
                         controllerFocusTarget = "checklist";
                         focusedChecklistIndex = (focusedChecklistIndex + 1) % stageMarkers.length;
                         focusTargetItem(); triggerChecklistTeleport();
                     }
-                    gamepadDebounceTimeout = now + 160;
+                    gamepadDebounceTimeout = now + 130;
                 }
             }
 
-            // Resolved Cross-Mapped Action Trigger Input
-            if (gp.buttons[actionButtonIndex].pressed && !lastButtonState[actionButtonIndex]) {
+            // Universal Cross-Mapped Selection Action Execution Node
+            if (gp.buttons[standardMappingSOUTH].pressed && !lastButtonState[standardMappingSOUTH]) {
                 if (controllerFocusTarget === "stages") {
                     loadStageData(STAGES[focusedStageIndex]);
                 } else if (controllerFocusTarget === "checklist" && stageMarkers.length) {
@@ -383,11 +388,12 @@ function setupGamepadSystem() {
                 }
             }
             
-            if (gp.buttons[3].pressed && !lastButtonState[3]) { // Reset View Button
+            // Universal View Reset Action
+            if (gp.buttons[3].pressed && !lastButtonState[3]) {
                 centerMapInViewport();
             }
 
-            lastButtonState[actionButtonIndex] = gp.buttons[actionButtonIndex].pressed;
+            lastButtonState[standardMappingSOUTH] = gp.buttons[standardMappingSOUTH].pressed;
             lastButtonState[3] = gp.buttons[3].pressed;
 
             applyTransform();
