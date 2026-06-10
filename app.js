@@ -101,7 +101,8 @@ async function loadStageData(stageName) {
         stageMarkers = customCoords;
     } else {
         try {
-            const res = await fetch(`${BASE_PATH}assets/puzzlepieces_data.json`);
+            // 🔄 PATHWAY ROUTING UPDATE: Points directly into assets/data/ folder
+            const res = await fetch(`${BASE_PATH}assets/data/puzzlepieces_data.json`);
             if (!res.ok) throw new Error();
             const data = await res.json();
             stageMarkers = data[stageName] || [];
@@ -119,7 +120,8 @@ async function loadStageData(stageName) {
     });
 
     const fileName = MAP_FILES[stageName];
-    const targetSrcURL = `${BASE_PATH}maps/${fileName}?t=${new Date().getTime()}`;
+    // 🔄 PATHWAY ROUTING UPDATE: Points directly into assets/maps/ folder
+    const targetSrcURL = `${BASE_PATH}assets/maps/${fileName}?t=${new Date().getTime()}`;
     
     const imgWorker = new Image();
     
@@ -220,19 +222,16 @@ async function buildChecklistUI() {
     focusTargetItem();
 }
 
-/* ==========================================================================
-   ⚠️ OVERHAULED GLOBAL TOTALS CALCULATOR - MULTI-DEVICE PROTECTION MATRIX
-   ========================================================================== */
 async function calculateGlobalTotals(activeCollectedCount) {
     if (!db) return;
 
     let totalPieces = 0;
     let totalCollected = 0;
 
-    // 1. Fetch fallback community blueprint data so clean devices have out-of-the-box tracking metrics
     let fallbackBlueprintData = {};
     try {
-        const res = await fetch(`${BASE_PATH}assets/puzzlepieces_data.json`);
+        // 🔄 PATHWAY ROUTING UPDATE: Points directly into assets/data/ folder
+        const res = await fetch(`${BASE_PATH}assets/data/puzzlepieces_data.json`);
         if (res.ok) {
             fallbackBlueprintData = await res.json();
         }
@@ -244,12 +243,10 @@ async function calculateGlobalTotals(activeCollectedCount) {
     const progressStore = tx.objectStore("user_progress");
     const coordsStore = tx.objectStore("admin_coordinates");
 
-    // 2. Strict sequential sync loop processing to prevent mobile thread collision race conditions
     for (const stg of STAGES) {
         let stgTotal = 0;
         let stgCollected = 0;
 
-        // Pull coordinates layout structure data natively or from static blueprint
         const coordResult = await new Promise(resolve => {
             const req = coordsStore.get(stg);
             req.onsuccess = () => resolve(req.result);
@@ -264,7 +261,6 @@ async function calculateGlobalTotals(activeCollectedCount) {
             stgTotal = fallbackBlueprintData[stg].length;
         }
 
-        // Pull active progression data
         const progressResult = await new Promise(resolve => {
             const req = progressStore.get(stg);
             req.onsuccess = () => resolve(req.result || {});
@@ -283,7 +279,6 @@ async function calculateGlobalTotals(activeCollectedCount) {
         totalCollected += stgCollected;
     }
 
-    // 3. UI Update phase execution block
     const globalPerc = totalPieces ? Math.round((totalCollected / totalPieces) * 100) : 0;
     const totalStatsEl = document.getElementById('totalStats');
     const totalFillEl = document.getElementById('totalFill');
@@ -462,9 +457,10 @@ function adminManualDelete() {
 async function runAutoScanner() {
     if (!isAdminMode) return;
     try {
-        const templateURL = `${BASE_PATH}assets/puzzle-piece.png`;
+        // 🔄 PATHWAY ROUTING UPDATE: Points directly into assets/images/ folder
+        const templateURL = `${BASE_PATH}assets/images/puzzle-piece.png`;
         const res = await fetch(templateURL);
-        if(!res.ok) throw new Error("Template image 'assets/puzzle-piece.png' not found.");
+        if(!res.ok) throw new Error("Template image 'assets/images/puzzle-piece.png' not found.");
 
         const blob = await res.blob();
         const tImg = await new Promise((resolve, reject) => { 
