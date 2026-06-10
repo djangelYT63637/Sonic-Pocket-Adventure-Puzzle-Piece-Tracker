@@ -26,7 +26,6 @@ const MAP_FILES = {
 
 const getBasePath = () => {
     const loc = window.location;
-    // CRITICAL DOMAIN UNIFICATION MATRIX: Automatically adjusts resolution for custom URLs or subfolders.
     if (loc.hostname.includes("github.io")) {
         const pathSegments = loc.pathname.split('/').filter(s => s.length > 0);
         return `${loc.origin}/${pathSegments[0]}/`;
@@ -42,7 +41,7 @@ let isAdminMode = new URLSearchParams(window.location.search).get('mode') === 'a
 let globalActiveMapImage = null;
 
 // Hardware Controller Matrix
-let controllerFocusTarget = "stages"; // Options: "stages" | "checklist"
+let controllerFocusTarget = "stages";
 let focusedStageIndex = 0;
 let focusedChecklistIndex = 0;
 let lastButtonState = {};
@@ -59,7 +58,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('.admin-ui').forEach(el => el.style.display = isAdminMode ? 'flex' : 'none');
     
-    // Core community IndexedDB Matrix Storage Initialization Loop
     const dbRequest = indexedDB.open("SPA_Community_Tracker_DB", 3);
     dbRequest.onupgradeneeded = (e) => {
         const d = e.target.result;
@@ -103,7 +101,6 @@ async function loadStageData(stageName) {
         stageMarkers = customCoords;
     } else {
         try {
-            // Communities Coordinates Assets Blueprint Reference
             const res = await fetch(`${BASE_PATH}assets/puzzlepieces_data.json`);
             if (!res.ok) throw new Error();
             const data = await res.json();
@@ -125,7 +122,6 @@ async function loadStageData(stageName) {
     const targetSrcURL = `${BASE_PATH}maps/${fileName}?t=${new Date().getTime()}`;
     
     const imgWorker = new Image();
-    // OFFLINE SYNC FIX: Ensuring mobile engine cross-blocking compatibility by removing redundent crossOrigin assignment.
     
     imgWorker.onload = () => {
         globalActiveMapImage = imgWorker;
@@ -215,7 +211,6 @@ async function buildChecklistUI() {
     const currentCollected = stageMarkers.filter((_, i) => collectedStates[i]).length;
     const stagePerc = stageMarkers.length ? Math.round((currentCollected / stageMarkers.length) * 100) : 0;
     
-    // Community UI label progress engine metrics
     const stagePercEl = document.getElementById('stagePerc');
     const stageFillEl = document.getElementById('stageFill');
     if (stagePercEl) stagePercEl.innerText = `${stagePerc}% [${currentCollected}/${stageMarkers.length}]`;
@@ -295,7 +290,6 @@ function setupGestureListeners() {
             const b = canvas.getBoundingClientRect();
             const cx = (e.clientX - b.left) / zoom, cy = (e.clientY - b.top) / zoom;
             
-            // Core Community Admin Coordination Injection System Blueprint
             if (isAdminMode) {
                 const clickedExistingPiece = stageMarkers.findIndex(m => cx >= m.x && cx <= (m.x + 15) && cy >= m.y && cy <= (m.y + 22));
                 if (clickedExistingPiece === -1) {
@@ -322,9 +316,6 @@ function zoomCalc(m, fx, fy) {
     zoom = nz; applyTransform();
 }
 
-/* ==========================================================================
-   ADVANCED GAMEPAD CROSS-MAPPING & DEBOUNCE ENGINE (v1.0 stable)
-   ========================================================================== */
 function setupGamepadSystem() {
     window.addEventListener("gamepadconnected", (event) => {
         const loop = () => {
@@ -332,7 +323,6 @@ function setupGamepadSystem() {
             const gp = gamepads[0];
             if (!gp) return requestAnimationFrame(loop);
 
-            // Stick Control Matrix Blueprint
             if (Math.abs(gp.axes[0]) > 0.18) offsetX -= gp.axes[0] * 8;
             if (Math.abs(gp.axes[1]) > 0.18) offsetY -= gp.axes[1] * 8;
             if (Math.abs(gp.axes[3]) > 0.18) {
@@ -341,35 +331,32 @@ function setupGamepadSystem() {
                 zoomCalc(gp.axes[3] > 0 ? 0.96 : 1.04, cX, cY);
             }
 
-            // ADVANCED UNIVERSAL MAPPING CROSS-RESOLVER
-            // Determines which browser index physical 'A' vs 'B' assignments correspond with.
-            let standardMappingSOUTH = 0; // Xbox/PlayStation A/Cross
+            let standardMappingSOUTH = 0; 
             let standardMappingEAST = 1;
 
             if (gp.id.includes("ic-Con") || gp.id.includes("Nintendo") || gp.id.includes("Switch")) {
-                standardMappingSOUTH = 1; // Nintendo physical East button (A)
+                standardMappingSOUTH = 1; 
                 standardMappingEAST = 0;
             }
 
-            // Optimal Debounce Control Timing Cycle (130ms for responsiveness)
             const now = Date.now();
             if (now > gamepadDebounceTimeout) {
-                if (gp.buttons[12]?.pressed) { // UP
+                if (gp.buttons[12]?.pressed) { 
                     controllerFocusTarget = "stages";
                     focusedStageIndex = (focusedStageIndex - 1 + STAGES.length) % STAGES.length;
                     focusTargetItem(); gamepadDebounceTimeout = now + 130;
-                } else if (gp.buttons[13]?.pressed) { // DOWN
+                } else if (gp.buttons[13]?.pressed) { 
                     controllerFocusTarget = "stages";
                     focusedStageIndex = (focusedStageIndex + 1) % STAGES.length;
                     focusTargetItem(); gamepadDebounceTimeout = now + 130;
-                } else if (gp.buttons[14]?.pressed) { // LEFT
+                } else if (gp.buttons[14]?.pressed) { 
                     if (stageMarkers.length) {
                         controllerFocusTarget = "checklist";
                         focusedChecklistIndex = (focusedChecklistIndex - 1 + stageMarkers.length) % stageMarkers.length;
                         focusTargetItem(); triggerChecklistTeleport();
                     }
                     gamepadDebounceTimeout = now + 130;
-                } else if (gp.buttons[15]?.pressed) { // RIGHT
+                } else if (gp.buttons[15]?.pressed) { 
                     if (stageMarkers.length) {
                         controllerFocusTarget = "checklist";
                         focusedChecklistIndex = (focusedChecklistIndex + 1) % stageMarkers.length;
@@ -379,7 +366,6 @@ function setupGamepadSystem() {
                 }
             }
 
-            // Universal Cross-Mapped Selection Action Execution Node
             if (gp.buttons[standardMappingSOUTH].pressed && !lastButtonState[standardMappingSOUTH]) {
                 if (controllerFocusTarget === "stages") {
                     loadStageData(STAGES[focusedStageIndex]);
@@ -388,8 +374,7 @@ function setupGamepadSystem() {
                 }
             }
             
-            // Universal View Reset Action
-            if (gp.buttons[3].pressed && !lastButtonState[3]) {
+            if (gp.buttons[3].pressed && !lastButtonState[3]) { 
                 centerMapInViewport();
             }
 
@@ -483,8 +468,50 @@ async function runAutoScanner() {
     }
 }
 
-function exportMasterJSON() {
-    const out = {}; out[currentStage] = stageMarkers.map(m => ({ x: Math.round(m.x), y: Math.round(m.y) }));
-    const blob = new Blob([JSON.stringify(out, null, 4)], { type: 'application/json' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'puzzlepieces_data.json'; a.click();
+/* ==========================================================================
+   UPGRADED ASYNC MASTER DATA PACKAGING ENGINE (v1.0 FULL INTEGRATION)
+   ========================================================================== */
+async function exportMasterJSON() {
+    if (!db) return alert("Storage engine not fully mounted yet.");
+    
+    const masterExportObject = {};
+    let fallbackCounter = 0;
+    
+    const tx = db.transaction("admin_coordinates", "readonly");
+    const coordsStore = tx.objectStore("admin_coordinates");
+
+    // Loop through every single act name to build a complete game structural map
+    STAGES.forEach(stg => {
+        const req = coordsStore.get(stg);
+        req.onsuccess = () => {
+            if (req.result && req.result.length > 0) {
+                // If IndexedDB has records, clear clean integer metrics mapping parameters
+                masterExportObject[stg] = req.result.map(m => ({ x: Math.round(m.x), y: Math.round(m.y) }));
+            } else if (stg === currentStage && stageMarkers.length > 0) {
+                // Fallback protection safeguard mapping values
+                masterExportObject[stg] = stageMarkers.map(m => ({ x: Math.round(m.x), y: Math.round(m.y) }));
+            } else {
+                // Keep the JSON file structurally balanced for unmapped stages
+                masterExportObject[stg] = [];
+            }
+            
+            fallbackCounter++;
+            
+            // Once every single act data channel passes through the async queue, execute download
+            if (fallbackCounter === STAGES.length) {
+                const blob = new Blob([JSON.stringify(masterExportObject, null, 4)], { type: 'application/json' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'puzzlepieces_data.json';
+                a.click();
+            }
+        };
+        
+        req.onerror = () => {
+            fallbackCounter++;
+            if (fallbackCounter === STAGES.length) {
+                alert("An error occurred trying to extract deep tracking datasets.");
+            }
+        };
+    });
 }
