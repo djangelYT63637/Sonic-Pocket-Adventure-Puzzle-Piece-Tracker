@@ -216,39 +216,80 @@ async function buildChecklistUI() {
     if (stagePercEl) stagePercEl.innerText = `${stagePerc}% [${currentCollected}/${stageMarkers.length}]`;
     if (stageFillEl) stageFillEl.style.width = `${stagePerc}%`;
     
-    calculateGlobalTotals(currentCollected);
+    await calculateGlobalTotals(currentCollected);
     focusTargetItem();
 }
 
-function calculateGlobalTotals(activeCollectedCount) {
+/* ==========================================================================
+   ⚠️ OVERHAULED GLOBAL TOTALS CALCULATOR - MULTI-DEVICE PROTECTION MATRIX
+   ========================================================================== */
+async function calculateGlobalTotals(activeCollectedCount) {
     if (!db) return;
-    let totalPieces = 0, totalCollected = 0, processedCount = 0;
+
+    let totalPieces = 0;
+    let totalCollected = 0;
+
+    // 1. Fetch fallback community blueprint data so clean devices have out-of-the-box tracking metrics
+    let fallbackBlueprintData = {};
+    try {
+        const res = await fetch(`${BASE_PATH}assets/puzzlepieces_data.json`);
+        if (res.ok) {
+            fallbackBlueprintData = await res.json();
+        }
+    } catch (e) {
+        fallbackBlueprintData = {};
+    }
+
     const tx = db.transaction(["user_progress", "admin_coordinates"], "readonly");
     const progressStore = tx.objectStore("user_progress");
     const coordsStore = tx.objectStore("admin_coordinates");
 
-    STAGES.forEach(stg => {
-        let stgTotal = 0, stgCollected = 0;
-        const coordReq = coordsStore.get(stg);
-        coordReq.onsuccess = () => {
-            stgTotal = coordReq.result ? coordReq.result.length : (stg === currentStage ? stageMarkers.length : 0);
-            const progReq = progressStore.get(stg);
-            progReq.onsuccess = () => {
-                const prog = progReq.result || {};
-                if (stg === currentStage) stgCollected = activeCollectedCount;
-                else { for(let k in prog) { if(prog[k]) stgCollected++; } }
+    // 2. Strict sequential sync loop processing to prevent mobile thread collision race conditions
+    for (const stg of STAGES) {
+        let stgTotal = 0;
+        let stgCollected = 0;
 
-                totalPieces += stgTotal; totalCollected += stgCollected; processedCount++;
-                if (processedCount === STAGES.length) {
-                    const globalPerc = totalPieces ? Math.round((totalCollected / totalPieces) * 100) : 0;
-                    const totalStatsEl = document.getElementById('totalStats');
-                    const totalFillEl = document.getElementById('totalFill');
-                    if (totalStatsEl) totalStatsEl.innerText = `${globalPerc}% [${totalCollected}/${totalPieces}]`;
-                    if (totalFillEl) totalFillEl.style.width = `${globalPerc}%`;
-                }
-            };
-        };
-    });
+        // Pull coordinates layout structure data natively or from static blueprint
+        const coordResult = await new Promise(resolve => {
+            const req = coordsStore.get(stg);
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => resolve(null);
+        });
+
+        if (coordResult) {
+            stgTotal = coordResult.length;
+        } else if (stg === currentStage) {
+            stgTotal = stageMarkers.length;
+        } else if (fallbackBlueprintData[stg]) {
+            stgTotal = fallbackBlueprintData[stg].length;
+        }
+
+        // Pull active progression data
+        const progressResult = await new Promise(resolve => {
+            const req = progressStore.get(stg);
+            req.onsuccess = () => resolve(req.result || {});
+            req.onerror = () => resolve({});
+        });
+
+        if (stg === currentStage) {
+            stgCollected = activeCollectedCount;
+        } else {
+            for (let k in progressResult) {
+                if (progressResult[k]) stgCollected++;
+            }
+        }
+
+        totalPieces += stgTotal;
+        totalCollected += stgCollected;
+    }
+
+    // 3. UI Update phase execution block
+    const globalPerc = totalPieces ? Math.round((totalCollected / totalPieces) * 100) : 0;
+    const totalStatsEl = document.getElementById('totalStats');
+    const totalFillEl = document.getElementById('totalFill');
+    
+    if (totalStatsEl) totalStatsEl.innerText = `${globalPerc}% [${totalCollected}/${totalPieces}]`;
+    if (totalFillEl) totalFillEl.style.width = `${globalPerc}%`;
 }
 
 function togglePiece(idx) {
@@ -468,9 +509,6 @@ async function runAutoScanner() {
     }
 }
 
-/* ==========================================================================
-   UPGRADED ASYNC MASTER DATA PACKAGING ENGINE (v1.0 FULL INTEGRATION)
-   ========================================================================== */
 async function exportMasterJSON() {
     if (!db) return alert("Storage engine not fully mounted yet.");
     
@@ -480,24 +518,18 @@ async function exportMasterJSON() {
     const tx = db.transaction("admin_coordinates", "readonly");
     const coordsStore = tx.objectStore("admin_coordinates");
 
-    // Loop through every single act name to build a complete game structural map
     STAGES.forEach(stg => {
         const req = coordsStore.get(stg);
         req.onsuccess = () => {
             if (req.result && req.result.length > 0) {
-                // If IndexedDB has records, clear clean integer metrics mapping parameters
                 masterExportObject[stg] = req.result.map(m => ({ x: Math.round(m.x), y: Math.round(m.y) }));
             } else if (stg === currentStage && stageMarkers.length > 0) {
-                // Fallback protection safeguard mapping values
                 masterExportObject[stg] = stageMarkers.map(m => ({ x: Math.round(m.x), y: Math.round(m.y) }));
             } else {
-                // Keep the JSON file structurally balanced for unmapped stages
                 masterExportObject[stg] = [];
             }
             
             fallbackCounter++;
-            
-            // Once every single act data channel passes through the async queue, execute download
             if (fallbackCounter === STAGES.length) {
                 const blob = new Blob([JSON.stringify(masterExportObject, null, 4)], { type: 'application/json' });
                 const a = document.createElement('a');
