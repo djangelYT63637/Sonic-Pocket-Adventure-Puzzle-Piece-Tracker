@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SONIC POCKET ADVENTURE: PIECE TRACKER - ENTERPRISE CORE ENGINE (v22.0)
+   SONIC POCKET ADVENTURE: PIECE TRACKER - CORE INTERFACE ENGINE (v1.0)
    ========================================================================== */
 
 const STAGES = [
@@ -34,14 +34,13 @@ const getBasePath = () => {
 };
 const BASE_PATH = getBasePath();
 
-// Global Context Values Engine Space
 let db = null, currentStage = STAGES[0], stageMarkers = [], collectedStates = {};
 let zoom = 0.5, offsetX = 0, offsetY = 0, isDragging = false, startX = 0, startY = 0, initialPinchDist = 0;
 let isAdminMode = new URLSearchParams(window.location.search).get('mode') === 'admin';
 let globalActiveMapImage = null;
 
-// Gamepad Matrix Focus Parameters
-let controllerFocusTarget = "stages"; // Options: "stages" | "checklist"
+// Gamepad configuration parameters 
+let controllerFocusTarget = "stages";
 let focusedStageIndex = 0;
 let focusedChecklistIndex = 0;
 let lastButtonState = {};
@@ -122,7 +121,6 @@ async function loadStageData(stageName) {
     const targetSrcURL = `${BASE_PATH}maps/${fileName}?t=${new Date().getTime()}`;
     
     const imgWorker = new Image();
-    // FIX: Removed crossOrigin assignment to fix cross-site blocking errors in mobile engines
     
     imgWorker.onload = () => {
         globalActiveMapImage = imgWorker;
@@ -135,7 +133,6 @@ async function loadStageData(stageName) {
             canvas.style.width = targetWidth + "px";
             canvas.style.height = targetHeight + "px";
         }
-        
         centerMapInViewport();
     };
     
@@ -145,7 +142,7 @@ async function loadStageData(stageName) {
             canvas.style.width = "100%"; canvas.style.height = "auto";
             ctx.fillStyle = "#000c22"; ctx.fillRect(0, 0, 600, 340);
             ctx.fillStyle = "#ff3333"; ctx.font = "8px 'Press Start 2P'";
-            ctx.fillText("IMAGE LOADING PIPELINE REFUSED BY DEVICE ENGINE", 20, 50);
+            ctx.fillText("MAP RENDER PIPELINE OFFLINE COMPATIBILITY TIMEOUT", 20, 50);
         }
         buildChecklistUI();
     };
@@ -291,6 +288,19 @@ function setupGestureListeners() {
             if (isDragging) return;
             const b = canvas.getBoundingClientRect();
             const cx = (e.clientX - b.left) / zoom, cy = (e.clientY - b.top) / zoom;
+            
+            // ADMIN MODE DIRECT CLINK INJECTION SYSTEM
+            if (isAdminMode) {
+                const clickedExistingPiece = stageMarkers.findIndex(m => cx >= m.x && cx <= (m.x + 15) && cy >= m.y && cy <= (m.y + 22));
+                if (clickedExistingPiece === -1) {
+                    stageMarkers.push({ x: Math.round(cx - 7.5), y: Math.round(cy - 11) });
+                    stageMarkers.sort((a, b) => a.x - b.x);
+                    if (db) db.transaction("admin_coordinates", "readwrite").objectStore("admin_coordinates").put(stageMarkers, currentStage);
+                    renderMap();
+                    return;
+                }
+            }
+
             const hit = stageMarkers.findIndex(m => cx >= m.x && cx <= (m.x + 15) && cy >= m.y && cy <= (m.y + 22));
             if (hit !== -1) togglePiece(hit);
         };
@@ -307,61 +317,65 @@ function zoomCalc(m, fx, fy) {
 }
 
 /* ==========================================================================
-   ADVANCED METADATA CONTROLLER ENGINE: D-PAD SELECTION MATRIX
+   CROSS-PLATFORM ADVANCED HARDWARE CONTROLLER LAYOUT CROSS-MAPPER
    ========================================================================== */
 function setupGamepadSystem() {
-    window.addEventListener("gamepadconnected", () => {
+    window.addEventListener("gamepadconnected", (event) => {
         const loop = () => {
             const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
             const gp = gamepads[0];
             if (!gp) return requestAnimationFrame(loop);
 
-            // Stick 1 (Left Analog): Map Camera Translation Panning 
+            // DYNAMIC LAYOUT CROSS-MAPPER DETECTION MATRIX
+            let idString = gp.id.toLowerCase();
+            let actionButtonIndex = 0;  // Standard Western South Button (Xbox A, PlayStation Cross)
+            let backButtonIndex = 1;    // Standard Western East Button
+
+            if (idString.includes("licom") || idString.includes("switch") || idString.includes("nintendo") || idString.includes("sega")) {
+                // Adjusts for Nintendo / Eastern Controller Layouts (Physical Right Button is Action)
+                actionButtonIndex = 1; 
+                backButtonIndex = 0;
+            }
+
+            // Sticks Control
             if (Math.abs(gp.axes[0]) > 0.18) offsetX -= gp.axes[0] * 8;
             if (Math.abs(gp.axes[1]) > 0.18) offsetY -= gp.axes[1] * 8;
-
-            // Stick 2 (Right Analog): Map Scaling Center Zoom
             if (Math.abs(gp.axes[3]) > 0.18) {
                 const cX = viewport ? viewport.offsetWidth / 2 : window.innerWidth / 2;
                 const cY = viewport ? viewport.offsetHeight / 2 : window.innerHeight / 2;
                 zoomCalc(gp.axes[3] > 0 ? 0.96 : 1.04, cX, cY);
             }
 
-            // D-Pad Menu Scanning Handler Logic
+            // D-Pad Menu Focus Scanning
             const now = Date.now();
             if (now > gamepadDebounceTimeout) {
-                let dpadUp = gp.buttons[12]?.pressed;
-                let dpadDown = gp.buttons[13]?.pressed;
-                let dpadLeft = gp.buttons[14]?.pressed;
-                let dpadRight = gp.buttons[15]?.pressed;
-
-                if (dpadUp) {
+                if (gp.buttons[12]?.pressed) { // UP
                     controllerFocusTarget = "stages";
                     focusedStageIndex = (focusedStageIndex - 1 + STAGES.length) % STAGES.length;
-                    focusTargetItem(); gamepadDebounceTimeout = now + 180;
-                } else if (dpadDown) {
+                    focusTargetItem(); gamepadDebounceTimeout = now + 160;
+                } else if (gp.buttons[13]?.pressed) { // DOWN
                     controllerFocusTarget = "stages";
                     focusedStageIndex = (focusedStageIndex + 1) % STAGES.length;
-                    focusTargetItem(); gamepadDebounceTimeout = now + 180;
-                } else if (dpadLeft) {
+                    focusTargetItem(); gamepadDebounceTimeout = now + 160;
+                } else if (gp.buttons[14]?.pressed) { // LEFT
                     if (stageMarkers.length) {
                         controllerFocusTarget = "checklist";
                         focusedChecklistIndex = (focusedChecklistIndex - 1 + stageMarkers.length) % stageMarkers.length;
                         focusTargetItem(); triggerChecklistTeleport();
                     }
-                    gamepadDebounceTimeout = now + 180;
-                } else if (dpadRight) {
+                    gamepadDebounceTimeout = now + 160;
+                } else if (gp.buttons[15]?.pressed) { // RIGHT
                     if (stageMarkers.length) {
                         controllerFocusTarget = "checklist";
                         focusedChecklistIndex = (focusedChecklistIndex + 1) % stageMarkers.length;
                         focusTargetItem(); triggerChecklistTeleport();
                     }
-                    gamepadDebounceTimeout = now + 180;
+                    gamepadDebounceTimeout = now + 160;
                 }
             }
 
-            // Button A (South): Action Select Execution Node
-            if (gp.buttons[0].pressed && !lastButtonState[0]) {
+            // Resolved Cross-Mapped Action Trigger Input
+            if (gp.buttons[actionButtonIndex].pressed && !lastButtonState[actionButtonIndex]) {
                 if (controllerFocusTarget === "stages") {
                     loadStageData(STAGES[focusedStageIndex]);
                 } else if (controllerFocusTarget === "checklist" && stageMarkers.length) {
@@ -369,12 +383,11 @@ function setupGamepadSystem() {
                 }
             }
             
-            // Button X (North): View Position Reset Command
-            if (gp.buttons[3].pressed && !lastButtonState[3]) {
+            if (gp.buttons[3].pressed && !lastButtonState[3]) { // Reset View Button
                 centerMapInViewport();
             }
 
-            lastButtonState[0] = gp.buttons[0].pressed;
+            lastButtonState[actionButtonIndex] = gp.buttons[actionButtonIndex].pressed;
             lastButtonState[3] = gp.buttons[3].pressed;
 
             applyTransform();
@@ -404,16 +417,6 @@ function triggerChecklistTeleport() {
     applyTransform();
 }
 
-function adminManualAdd() {
-    if (!isAdminMode || !viewport) return;
-    const viewCenterCanvasX = ((viewport.offsetWidth / 2) - offsetX) / zoom;
-    const viewCenterCanvasY = ((viewport.offsetHeight / 2) - offsetY) / zoom;
-    stageMarkers.push({ x: Math.round(viewCenterCanvasX - 7.5), y: Math.round(viewCenterCanvasY - 11) });
-    stageMarkers.sort((a, b) => a.x - b.x);
-    if (db) db.transaction("admin_coordinates", "readwrite").objectStore("admin_coordinates").put(stageMarkers, currentStage);
-    renderMap();
-}
-
 function adminManualDelete() {
     if (!isAdminMode || !stageMarkers.length) return;
     const targetIdx = prompt(`Enter piece number to delete (1 - ${stageMarkers.length}):`);
@@ -424,13 +427,9 @@ function adminManualDelete() {
     }
 }
 
-/* ==========================================================================
-   FIXED DATA ASSET TARGET LOOKUP PARSER
-   ========================================================================== */
 async function runAutoScanner() {
     if (!isAdminMode) return;
     try {
-        // FIX: Re-targeted path specifically to locate puzzle-piece.png image asset
         const templateURL = `${BASE_PATH}assets/puzzle-piece.png`;
         const res = await fetch(templateURL);
         if(!res.ok) throw new Error("Template image 'assets/puzzle-piece.png' not found.");
